@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Controllers;
+namespace App\Controllers\Master;
 
 use App\Core\Controller;
 use App\Models\UserPermission;
@@ -98,5 +98,35 @@ class PermissionController extends Controller
         $this->model->update($id, $data);
 
         $this->json(['message' => 'Permission updated']);
+    }
+
+    /**
+     * PUT /api/permissions/{id}/toggle-status
+     * Toggle permission active status (1 ↔ 0)
+     * Requires: PERMISSION_EDIT
+     */
+    public function toggleStatus(array $params): void
+    {
+        $id = (int) ($params['id'] ?? 0);
+
+        $perm = $this->model->find($id);
+
+        if (!$perm) {
+            $this->json(['message' => 'Permission not found'], 404);
+            return;
+        }
+
+        // Toggle status
+        $newStatus = ((int)$perm['is_active'] === 1) ? 0 : 1;
+
+        $this->model->update($id, [
+            'is_active' => $newStatus,
+            'updatedAt' => date('Y-m-d H:i:s')
+        ]);
+
+        $this->json([
+            'message' => $newStatus ? 'Permission activated' : 'Permission deactivated',
+            'is_active' => $newStatus
+        ]);
     }
 }

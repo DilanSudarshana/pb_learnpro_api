@@ -14,7 +14,7 @@ declare(strict_types=1);
  * Each route additionally requires a specific permission.
  */
 
-use App\Controllers\PermissionController;
+use App\Controllers\Master\PermissionController;
 use App\Middleware\AuthMiddleware;
 
 /**
@@ -55,6 +55,16 @@ $router->post('/api/permissions', [PermissionController::class, 'store'], [
  * Requires: PERMISSION_EDIT
  */
 $router->put('/api/permissions/{id}', [PermissionController::class, 'update'], [
+    AuthMiddleware::class,
+    permissionMiddleware('PERMISSION_EDIT'),
+]);
+
+/**
+ * PUT /api/permissions/{id}/toggle-status
+ * Activate / Deactivate permission
+ * Requires: PERMISSION_EDIT
+ */
+$router->put('/api/permissions/{id}/toggle-status', [PermissionController::class, 'toggleStatus'], [
     AuthMiddleware::class,
     permissionMiddleware('PERMISSION_EDIT'),
 ]);

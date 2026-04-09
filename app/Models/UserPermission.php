@@ -44,7 +44,7 @@ class UserPermission extends Model
     public function getAllActive(): array
     {
         $stmt = $this->db->query(
-            "SELECT * FROM `{$this->table}` WHERE is_active = 1 ORDER BY name"
+            "SELECT * FROM `{$this->table}` WHERE is_active = 1 ORDER BY display_name"
         );
         return $stmt->fetchAll();
     }
