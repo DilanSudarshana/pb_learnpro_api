@@ -14,7 +14,7 @@ declare(strict_types=1);
  * Each route additionally requires a specific permission.
  */
 
-use App\Controllers\RoleController;
+use App\Controllers\Master\RoleController;
 use App\Middleware\AuthMiddleware;
 
 /**
@@ -64,7 +64,7 @@ $router->post('/api/roles/{id}/permissions', [RoleController::class, 'assignPerm
  * Revokes a permission from a role (sets is_active = 0).
  * Requires: ROLE_EDIT
  */
-$router->delete('/api/roles/{id}/permissions/{permissionId}', [RoleController::class, 'revokePermission'], [
+$router->put('/api/roles/{id}/permissions/{permissionId}', [RoleController::class, 'revokePermission'], [
     AuthMiddleware::class,
     permissionMiddleware('ROLE_EDIT'),
 ]);
