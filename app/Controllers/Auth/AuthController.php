@@ -90,7 +90,7 @@ class AuthController extends Controller
             'message' => 'Login successful',
             'token'   => $token,
             'user'    => [
-                'id'             => $user['id'],
+                'user_id'             => $user['user_id'],
                 'email'          => $user['email'],
                 'service_number' => $user['service_number'] ?? null,
                 'role_id'        => $user['role_id'] ?? null,
@@ -114,7 +114,7 @@ class AuthController extends Controller
         $this->json([
             'message' => 'Authenticated user',
             'user'    => [
-                'id'             => $user['user_id'],
+                'user_id'             => $user['user_id'],
                 'email'          => $user['email'],
                 'role_id'        => $user['role_id'],
                 'service_number' => $user['service_number'] ?? null,

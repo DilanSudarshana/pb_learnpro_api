@@ -53,7 +53,7 @@ class JwtHelper
             'iss'              => $_ENV['APP_URL'] ?? 'learnpro-api',
             'iat'              => time(),
             'exp'              => time() + self::getExpire(),
-            'user_id'          => $user['id'],
+            'user_id'          => $user['user_id'],
             'email'            => $user['email'],
             'role_id'          => $user['role_id'] ?? null,
             'service_number'   => $user['service_number'] ?? null,
