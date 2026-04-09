@@ -6,56 +6,103 @@ namespace App\Controllers\Master;
 
 use App\Core\Controller;
 use App\Models\RolePermission;
+use App\Models\UserRole;
 
 /**
  * RolePermissionController
- * Handles assigning and revoking permissions for roles
  */
 class RolePermissionController extends Controller
 {
     private RolePermission $model;
+    private UserRole $roleModel;
 
     public function __construct()
     {
         $this->model = new RolePermission();
+        $this->roleModel = new UserRole();
     }
 
     /**
-     * POST /api/roles/{id}/permissions
-     * Assign permission to role
+     * GET /api/role-permissions
+     * Get all roles with their permissions
      */
-    public function assign(array $params): void
+    public function index(): void
     {
-        $roleId = (int) ($params['id'] ?? 0);
-        $body = $this->getBody();
+        $roles = $this->roleModel->all();
+        $data = [];
 
-        $permissionId = (int) ($body['permission_id'] ?? 0);
+        foreach ($roles as $role) {
+            $roleId = (int)$role['role_id'];
 
-        if (!$roleId || !$permissionId) {
-            $this->json(['message' => 'role_id and permission_id are required'], 400);
-            return;
+            $permissions = $this->model->getPermissionsByRole($roleId);
+
+            $data[] = [
+                'role_id' => $roleId,
+                'role_name' => $role['role_name'],
+                'permissions' => $permissions
+            ];
         }
 
-        $this->model->assign($roleId, $permissionId);
-
-        $this->json(['message' => 'Permission assigned to role']);
+        $this->json([
+            'message' => 'Role permissions retrieved',
+            'data' => $data
+        ]);
     }
 
     /**
-     * DELETE /api/roles/{id}/permissions/{permissionId}
+     * PUT /api/role-permissions-toggle/{id}
      */
-    public function revoke(array $params): void
+    public function toggleStatus(array $params): void
     {
-        $roleId = (int) ($params['id'] ?? 0);
-        $permissionId = (int) ($params['permissionId'] ?? 0);
+        $id = (int)($params['id'] ?? 0);
 
-        if (!$roleId || !$permissionId) {
-            $this->json(['message' => 'role_id and permission_id are required'], 400);
+        $record = $this->model->find($id);
+
+        if (!$record) {
+            $this->json(['message' => 'Record not found'], 404);
             return;
         }
 
-        $this->model->revoke($roleId, $permissionId);
+        $newStatus = ((int)$record['is_active'] === 1) ? 0 : 1;
 
-        $this->json(['message' => 'Permission revoked from role']);
+        $this->model->update($id, [
+            'is_active' => $newStatus,
+            'updatedAt' => date('Y-m-d H:i:s')
+        ]);
+
+        $this->json([
+            'message' => $newStatus ? 'Activated' : 'Deactivated',
+            'is_active' => $newStatus
+        ]);
+    }
+
+    /**
+     * PUT /api/role-permissions-activate/{id}
+     */
+    public function activate(array $params): void
+    {
+        $id = (int)($params['id'] ?? 0);
+
+        $this->model->update($id, [
+            'is_active' => 1,
+            'updatedAt' => date('Y-m-d H:i:s')
+        ]);
+
+        $this->json(['message' => 'Activated']);
+    }
+
+    /**
+     * PUT /api/role-permissions-deactivate/{id}
+     */
+    public function deactivate(array $params): void
+    {
+        $id = (int)($params['id'] ?? 0);
+
+        $this->model->update($id, [
+            'is_active' => 0,
+            'updatedAt' => date('Y-m-d H:i:s')
+        ]);
+
+        $this->json(['message' => 'Deactivated']);
     }
 }

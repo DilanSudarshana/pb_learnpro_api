@@ -53,4 +53,22 @@ class RolePermission extends Model
         );
         return $stmt->execute([$roleId, $permissionId]);
     }
+
+    public function getPermissionsByRole(int $roleId): array
+    {
+        $sql = "SELECT 
+                rp.role_id,
+                rp.is_active,
+                p.permission_id AS permission_id,
+                p.name,
+                p.display_name
+            FROM role_permissions rp
+            JOIN user_permissions p ON p.permission_id = rp.permission_id
+            WHERE rp.role_id = :role_id";
+
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute(['role_id' => $roleId]);
+
+        return $stmt->fetchAll(\PDO::FETCH_ASSOC);
+    }
 }
