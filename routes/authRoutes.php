@@ -44,3 +44,11 @@ $router->get('/api/auth/profile', [AuthController::class, 'profile'], [
     AuthMiddleware::class,
     permissionMiddleware('PROFILE_MANAGEMENT'),
 ]);
+
+/**
+ * POST /api/auth/register
+ * Body : { email, password, first_name, last_name, ...optional detail fields }
+ * Creates user_mains + user_details rows. No JWT required (admin-driven
+ * registration — add AuthMiddleware + permission if you want it protected).
+ */
+$router->post('/api/auth/register', [AuthController::class, 'register']);

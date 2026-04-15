@@ -6,6 +6,7 @@ namespace App\Controllers\Auth;
 
 use App\Core\Controller;
 use App\Models\UserMain;
+use App\Models\UserDetails;
 use App\Models\UserRole;
 use App\Utils\JwtHelper;
 use App\Utils\HttpClient;
@@ -15,10 +16,14 @@ class AuthController extends Controller
     private UserMain $userModel;
     private UserRole $roleModel;
 
+    private UserDetails $detailModel;
+
+
     public function __construct()
     {
         $this->userModel = new UserMain();
         $this->roleModel = new UserRole();
+        $this->detailModel = new UserDetails();
     }
 
     /**
@@ -135,5 +140,107 @@ class AuthController extends Controller
             'message' => 'You have PROFILE_MANAGEMENT permission',
             'user'    => $user,
         ]);
+    }
+
+    /**
+     * POST /api/auth/register
+     *
+     * Creates a user_mains row + a user_details row in one transaction.
+     * Password is hashed with bcrypt before storage.
+     *
+     * Required body fields : email, password, first_name, last_name
+     * Optional body fields : service_number, phone_no, nic, dob, address,
+     *                        gender, department_id, branch_id, role_id, ...
+     */
+    public function register(): void
+    {
+        $body = $this->getBody();
+
+        // ── Validate required fields ─────────────────────────────────────────
+        $email     = trim($body['email']      ?? '');
+        $password  = trim($body['password']   ?? '');
+        $firstName = trim($body['first_name'] ?? '');
+        $lastName  = trim($body['last_name']  ?? '');
+
+        if (empty($email) || empty($password) || empty($firstName) || empty($lastName)) {
+            $this->json(['message' => 'email, password, first_name and last_name are required'], 400);
+            return;
+        }
+
+        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            $this->json(['message' => 'Invalid email address'], 400);
+            return;
+        }
+
+        // ── Check for duplicate email ─────────────────────────────────────────
+        if ($this->userModel->findByEmail($email)) {
+            $this->json(['message' => 'Email is already registered'], 409);
+            return;
+        }
+
+        // ── Create user_mains row ─────────────────────────────────────────────
+        $userId = $this->userModel->createUser([
+            'email'          => $email,
+            'password'       => password_hash($password, PASSWORD_BCRYPT),
+            'service_number' => $body['service_number'] ?? null,
+            'role_id'        => (int) ($body['role_id'] ?? 1),
+            'is_active'      => 1,
+            'is_delete'      => 0,
+        ]);
+
+        if (!$userId) {
+            $this->json(['message' => 'Failed to create user account'], 500);
+            return;
+        }
+
+        // ── Create user_details row ───────────────────────────────────────────
+        $detailFields = [
+            'user_main_id'                   => $userId,
+            'first_name'                     => $firstName,
+            'last_name'                      => $lastName,
+            'phone_no'                       => $body['phone_no']       ?? null,
+            'nic'                            => $body['nic']            ?? null,
+            'dob'                            => $body['dob']            ?? null,
+            'address'                        => $body['address']        ?? null,
+            'gender'                         => $body['gender']         ?? null,
+            'marital_status'                 => $body['marital_status'] ?? null,
+            'blood_group'                    => $body['blood_group']    ?? null,
+            'department_id'                  => $body['department_id']  ?? null,
+            'branch_id'                      => $body['branch_id']      ?? null,
+            'employment_type'                => $body['employment_type'] ?? null,
+            'date_joined'                    => $body['date_joined']    ?? date('Y-m-d'),
+            'probation_end_date'             => $body['probation_end_date'] ?? null,
+            'basic_salary'                   => $body['basic_salary']   ?? null,
+            'bank_account_number'            => $body['bank_account_number'] ?? null,
+            'tax_id'                         => $body['tax_id']         ?? null,
+            'epf_no'                         => $body['epf_no']         ?? null,
+            'manager_id'                     => $body['manager_id']     ?? null,
+            'emergency_contact_name'         => $body['emergency_contact_name'] ?? null,
+            'emergency_contact_relationship' => $body['emergency_contact_relationship'] ?? null,
+            'emergency_contact_phone'        => $body['emergency_contact_phone'] ?? null,
+            'additional_details'             => $body['additional_details'] ?? null,
+        ];
+
+        $detailId = $this->detailModel->createDetail($detailFields);
+
+        if (!$detailId) {
+            // Roll back the user_mains row so data stays consistent
+            $this->userModel->updateUserMain($userId, ['is_delete' => 1]);
+            $this->json(['message' => 'Failed to create user details'], 500);
+            return;
+        }
+
+        // ── Return created user (no password) ────────────────────────────────
+        $this->json([
+            'message' => 'User registered successfully',
+            'user'    => [
+                'user_id'        => $userId,
+                'email'          => $email,
+                'service_number' => $body['service_number'] ?? null,
+                'role_id'        => (int) ($body['role_id'] ?? 1),
+                'first_name'     => $firstName,
+                'last_name'      => $lastName,
+            ],
+        ], 201);
     }
 }

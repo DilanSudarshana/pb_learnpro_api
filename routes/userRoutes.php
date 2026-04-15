@@ -14,7 +14,7 @@ declare(strict_types=1);
  * Each route additionally requires a specific permission.
  */
 
-use App\Controllers\UserController;
+use App\Controllers\Employee\UserController;
 use App\Middleware\AuthMiddleware;
 
 /**

@@ -2,132 +2,219 @@
 
 declare(strict_types=1);
 
-namespace App\Controllers;
+namespace App\Controllers\Employee;
 
 use App\Core\Controller;
 use App\Models\UserMain;
-use App\Models\UserRole;
+use App\Models\UserDetails;
 
-/**
- * UserController — CRUD for user_mains
- * All routes are protected (AuthMiddleware required).
- */
 class UserController extends Controller
 {
-    private UserMain $userModel;
-    private UserRole $roleModel;
+    private UserMain    $userMain;
+    private UserDetails $userDetails;
 
     public function __construct()
     {
-        $this->userModel = new UserMain();
-        $this->roleModel = new UserRole();
+        $this->userMain    = new UserMain();
+        $this->userDetails = new UserDetails();
     }
 
-    /**
-     * GET /api/users
-     * Requires: USER_VIEW permission
-     */
+    // -------------------------------------------------------------------------
+    // GET /api/users
+    // Returns all non-deleted users (user_mains + user_details, no passwords).
+    // -------------------------------------------------------------------------
     public function index(): void
     {
-        $users = $this->userModel->all();
+        $users = $this->userMain->getAllUsers();
 
-        // Strip passwords before sending
-        $users = array_map(function ($u) {
-            unset($u['password']);
-            return $u;
-        }, $users);
-
-        $this->json([
-            'message' => 'Users retrieved successfully',
+        $this->jsonResponse([
+            'status'  => 'success',
+            'message' => 'Users retrieved successfully.',
             'data'    => $users,
-        ]);
+        ], 200);
     }
 
-    /**
-     * GET /api/users/{id}
-     * Requires: USER_VIEW permission
-     */
-    public function show(array $params): void
+    // -------------------------------------------------------------------------
+    // GET /api/users/{id}
+    // Returns a single user with both user_mains and user_details fields.
+    // -------------------------------------------------------------------------
+    public function show(int $id): void
     {
-        $id   = (int) ($params['id'] ?? 0);
-        $user = $this->userModel->find($id);
+        $user = $this->userMain->getUserById($id);
 
         if (!$user) {
-            $this->json(['message' => 'User not found'], 404);
+            $this->jsonResponse([
+                'status'  => 'error',
+                'message' => 'User not found.',
+            ], 404);
             return;
         }
 
+        // Remove password from response (getUserById doesn't select it,
+        // but guard here as a safety net).
         unset($user['password']);
 
-        // Attach role with permissions
-        $roleId = (int) ($user['role_id'] ?? 0);
-        if ($roleId) {
-            $user['role'] = $this->roleModel->findWithPermissions($roleId);
-        }
-
-        $this->json([
-            'message' => 'User retrieved successfully',
+        $this->jsonResponse([
+            'status'  => 'success',
+            'message' => 'User retrieved successfully.',
             'data'    => $user,
-        ]);
+        ], 200);
     }
 
-    /**
-     * PUT /api/users/{id}
-     * Requires: USER_EDIT permission
-     */
-    public function update(array $params): void
+    // -------------------------------------------------------------------------
+    // PUT /api/users/{id}
+    // Updates user_mains fields (service_number, role_id, is_active) and/or
+    // any user_details fields supplied in the request body.
+    // -------------------------------------------------------------------------
+    public function update(int $id): void
     {
-        $id   = (int) ($params['id'] ?? 0);
-        $user = $this->userModel->find($id);
+        // Make sure the user actually exists and isn't deleted.
+        $existing = $this->userMain->getUserById($id);
 
-        if (!$user) {
-            $this->json(['message' => 'User not found'], 404);
+        if (!$existing) {
+            $this->jsonResponse([
+                'status'  => 'error',
+                'message' => 'User not found.',
+            ], 404);
             return;
         }
 
-        $body = $this->getBody();
+        $body = $this->getRequestBody();
 
-        $allowedFields = ['service_number', 'role_id', 'is_active'];
-        $updateData    = [];
+        if (empty($body)) {
+            $this->jsonResponse([
+                'status'  => 'error',
+                'message' => 'Request body is empty.',
+            ], 400);
+            return;
+        }
 
-        foreach ($allowedFields as $field) {
-            if (array_key_exists($field, $body)) {
-                $updateData[$field] = $body[$field];
+        // ── Fields that belong to user_mains ─────────────────────────────────
+        $mainAllowed  = ['service_number', 'role_id', 'is_active'];
+        $mainData     = array_intersect_key($body, array_flip($mainAllowed));
+
+        // ── Fields that belong to user_details ───────────────────────────────
+        // Everything except the user_mains-specific fields (and id/passwords).
+        $detailDenied = array_merge($mainAllowed, ['user_id', 'password', 'email']);
+        $detailData   = array_diff_key($body, array_flip($detailDenied));
+
+        $mainUpdated   = false;
+        $detailUpdated = false;
+        $errors        = [];
+
+        if (!empty($mainData)) {
+            $mainUpdated = $this->userMain->updateUserMain($id, $mainData);
+            if (!$mainUpdated) {
+                $errors[] = 'Failed to update user main record.';
             }
         }
 
-        if (empty($updateData)) {
-            $this->json(['message' => 'No valid fields to update'], 400);
+        if (!empty($detailData)) {
+            $detailUpdated = $this->userDetails->updateByUserMainId($id, $detailData);
+            if (!$detailUpdated) {
+                $errors[] = 'Failed to update user detail record.';
+            }
+        }
+
+        if (!empty($errors)) {
+            $this->jsonResponse([
+                'status'  => 'error',
+                'message' => implode(' ', $errors),
+            ], 500);
             return;
         }
 
-        $updateData['updated_at'] = date('Y-m-d H:i:s');
+        if (!$mainUpdated && !$detailUpdated) {
+            $this->jsonResponse([
+                'status'  => 'error',
+                'message' => 'No valid fields provided to update.',
+            ], 400);
+            return;
+        }
 
-        $this->userModel->update($id, $updateData);
+        // Return the freshly updated user record.
+        $updated = $this->userMain->getUserById($id);
+        unset($updated['password']);
 
-        $this->json(['message' => 'User updated successfully']);
+        $this->jsonResponse([
+            'status'  => 'success',
+            'message' => 'User updated successfully.',
+            'data'    => $updated,
+        ], 200);
+    }
+
+    // -------------------------------------------------------------------------
+    // DELETE /api/users/{id}
+    // Soft-deletes: sets is_delete = 1 and is_active = 0 on both tables.
+    // -------------------------------------------------------------------------
+    public function destroy(int $id): void
+    {
+        $existing = $this->userMain->getUserById($id);
+
+        if (!$existing) {
+            $this->jsonResponse([
+                'status'  => 'error',
+                'message' => 'User not found.',
+            ], 404);
+            return;
+        }
+
+        // Soft-delete user_mains row.
+        $mainDeleted = $this->userMain->updateUserMain($id, [
+            'is_delete' => 1,
+            'is_active' => 0,
+        ]);
+
+        // Soft-delete user_details row via the FK (user_main_id = $id).
+        $detailDeleted = $this->userDetails->softDelete($id);
+
+        // softDelete() targets user_details.user_id; if that PK differs from
+        // user_main_id, use updateByUserMainId instead:
+        // $detailDeleted = $this->userDetails->updateByUserMainId($id, [
+        //     'is_delete' => 1,
+        //     'is_active' => 0,
+        // ]);
+
+        if (!$mainDeleted) {
+            $this->jsonResponse([
+                'status'  => 'error',
+                'message' => 'Failed to delete user.',
+            ], 500);
+            return;
+        }
+
+        $this->jsonResponse([
+            'status'  => 'success',
+            'message' => 'User deleted successfully.',
+        ], 200);
+    }
+
+    // -------------------------------------------------------------------------
+    // Helpers
+    // -------------------------------------------------------------------------
+
+    /**
+     * Decode JSON from the raw request body.
+     */
+    private function getRequestBody(): array
+    {
+        $raw = file_get_contents('php://input');
+        if (empty($raw)) {
+            return [];
+        }
+
+        $decoded = json_decode($raw, true);
+        return is_array($decoded) ? $decoded : [];
     }
 
     /**
-     * DELETE /api/users/{id}  (soft delete)
-     * Requires: USER_DELETE permission
+     * Send a JSON response and terminate.
      */
-    public function destroy(array $params): void
+    private function jsonResponse(array $payload, int $status = 200): void
     {
-        $id   = (int) ($params['id'] ?? 0);
-        $user = $this->userModel->find($id);
-
-        if (!$user) {
-            $this->json(['message' => 'User not found'], 404);
-            return;
-        }
-
-        $this->userModel->update($id, [
-            'is_delete'  => 1,
-            'is_active'  => 0,
-            'updated_at' => date('Y-m-d H:i:s'),
-        ]);
-
-        $this->json(['message' => 'User deleted successfully']);
+        http_response_code($status);
+        header('Content-Type: application/json');
+        echo json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        exit;
     }
 }
