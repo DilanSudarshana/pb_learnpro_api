@@ -156,7 +156,7 @@ class AuthController extends Controller
     {
         $body = $this->getBody();
 
-        // ── Validate required fields ─────────────────────────────────────────
+        # Validate required fields 
         $email     = trim($body['email']      ?? '');
         $password  = trim($body['password']   ?? '');
         $firstName = trim($body['first_name'] ?? '');
@@ -172,13 +172,13 @@ class AuthController extends Controller
             return;
         }
 
-        // ── Check for duplicate email ─────────────────────────────────────────
+        # Check for duplicate email
         if ($this->userModel->findByEmail($email)) {
             $this->json(['message' => 'Email is already registered'], 409);
             return;
         }
 
-        // ── Create user_mains row ─────────────────────────────────────────────
+        # Create user_mains row
         $userId = $this->userModel->createUser([
             'email'          => $email,
             'password'       => password_hash($password, PASSWORD_BCRYPT),
@@ -193,9 +193,9 @@ class AuthController extends Controller
             return;
         }
 
-        // ── Create user_details row ───────────────────────────────────────────
+        # Create user_details row 
         $detailFields = [
-            'user_main_id'                   => $userId,
+            'user_id'                   => $userId,
             'first_name'                     => $firstName,
             'last_name'                      => $lastName,
             'phone_no'                       => $body['phone_no']       ?? null,
@@ -222,13 +222,6 @@ class AuthController extends Controller
         ];
 
         $detailId = $this->detailModel->createDetail($detailFields);
-
-        if (!$detailId) {
-            // Roll back the user_mains row so data stays consistent
-            $this->userModel->updateUserMain($userId, ['is_delete' => 1]);
-            $this->json(['message' => 'Failed to create user details'], 500);
-            return;
-        }
 
         // ── Return created user (no password) ────────────────────────────────
         $this->json([
