@@ -105,7 +105,7 @@ class UserDetails extends Model
 
         $sql = "UPDATE `{$this->table}`
                 SET " . implode(', ', $setParts) . "
-                WHERE `user_main_id` = ?";
+                WHERE `user_id` = ?";
 
         return $this->db->prepare($sql)->execute($values);
     }

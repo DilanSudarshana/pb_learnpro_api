@@ -65,7 +65,6 @@ class UserMain extends Model
             um.password,
 
             ud.user_id AS detail_user_id,
-            ud.user_main_id,
             ud.first_name,
             ud.last_name,
             ud.phone_no,
@@ -99,7 +98,7 @@ class UserMain extends Model
 
         FROM user_mains um
         INNER JOIN user_details ud 
-            ON ud.user_main_id = um.user_id
+            ON ud.user_id = um.user_id
         WHERE ud.is_delete = 0"
         );
 
@@ -145,7 +144,7 @@ class UserMain extends Model
 
         FROM user_mains um
         LEFT JOIN user_details ud 
-            ON ud.user_main_id = um.user_id
+            ON ud.user_id = um.user_id
         WHERE um.user_id = :user_id
         LIMIT 1"
         );

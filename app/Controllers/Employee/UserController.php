@@ -12,11 +12,13 @@ class UserController extends Controller
 {
     private UserMain    $userMain;
     private UserDetails $userDetails;
+    private $db;
 
     public function __construct()
     {
         $this->userMain    = new UserMain();
         $this->userDetails = new UserDetails();
+        $this->db = \App\Core\Database::getInstance();
     }
 
     // -------------------------------------------------------------------------
@@ -38,8 +40,18 @@ class UserController extends Controller
     // GET /api/users/{id}
     // Returns a single user with both user_mains and user_details fields.
     // -------------------------------------------------------------------------
-    public function show(int $id): void
+    public function show(array $params): void
     {
+        $id = (int) ($params['id'] ?? 0);
+
+        if ($id <= 0) {
+            $this->jsonResponse([
+                'status'  => 'error',
+                'message' => 'Invalid user ID.',
+            ], 400);
+            return;
+        }
+
         $user = $this->userMain->getUserById($id);
 
         if (!$user) {
@@ -50,8 +62,7 @@ class UserController extends Controller
             return;
         }
 
-        // Remove password from response (getUserById doesn't select it,
-        // but guard here as a safety net).
+        // Safety (good practice)
         unset($user['password']);
 
         $this->jsonResponse([
@@ -66,8 +77,18 @@ class UserController extends Controller
     // Updates user_mains fields (service_number, role_id, is_active) and/or
     // any user_details fields supplied in the request body.
     // -------------------------------------------------------------------------
-    public function update(int $id): void
+    public function update(array $params): void
     {
+        $id = (int) ($params['id'] ?? 0);
+
+        if ($id <= 0) {
+            $this->jsonResponse([
+                'status'  => 'error',
+                'message' => 'Invalid user ID.',
+            ], 400);
+            return;
+        }
+
         // Make sure the user actually exists and isn't deleted.
         $existing = $this->userMain->getUserById($id);
 
@@ -89,12 +110,11 @@ class UserController extends Controller
             return;
         }
 
-        // ── Fields that belong to user_mains ─────────────────────────────────
-        $mainAllowed  = ['service_number', 'role_id', 'is_active'];
-        $mainData     = array_intersect_key($body, array_flip($mainAllowed));
+        // ── user_mains fields ─────────────────────
+        $mainAllowed = ['service_number', 'role_id', 'is_active'];
+        $mainData    = array_intersect_key($body, array_flip($mainAllowed));
 
-        // ── Fields that belong to user_details ───────────────────────────────
-        // Everything except the user_mains-specific fields (and id/passwords).
+        // ── user_details fields ───────────────────
         $detailDenied = array_merge($mainAllowed, ['user_id', 'password', 'email']);
         $detailData   = array_diff_key($body, array_flip($detailDenied));
 
@@ -102,37 +122,41 @@ class UserController extends Controller
         $detailUpdated = false;
         $errors        = [];
 
-        if (!empty($mainData)) {
-            $mainUpdated = $this->userMain->updateUserMain($id, $mainData);
-            if (!$mainUpdated) {
-                $errors[] = 'Failed to update user main record.';
-            }
-        }
+        // OPTIONAL: transaction (recommended)
+        $this->db->beginTransaction();
 
-        if (!empty($detailData)) {
-            $detailUpdated = $this->userDetails->updateByUserMainId($id, $detailData);
-            if (!$detailUpdated) {
-                $errors[] = 'Failed to update user detail record.';
-            }
-        }
+        try {
 
-        if (!empty($errors)) {
+            if (!empty($mainData)) {
+                $mainUpdated = $this->userMain->updateUserMain($id, $mainData);
+                if (!$mainUpdated) {
+                    throw new \Exception('Failed to update user main record.');
+                }
+            }
+
+            if (!empty($detailData)) {
+                $detailUpdated = $this->userDetails->updateByUserMainId($id, $detailData);
+                if (!$detailUpdated) {
+                    throw new \Exception('Failed to update user detail record.');
+                }
+            }
+
+            if (!$mainUpdated && !$detailUpdated) {
+                throw new \Exception('No valid fields provided to update.');
+            }
+
+            $this->db->commit();
+        } catch (\Exception $e) {
+            $this->db->rollBack();
+
             $this->jsonResponse([
                 'status'  => 'error',
-                'message' => implode(' ', $errors),
+                'message' => $e->getMessage(),
             ], 500);
             return;
         }
 
-        if (!$mainUpdated && !$detailUpdated) {
-            $this->jsonResponse([
-                'status'  => 'error',
-                'message' => 'No valid fields provided to update.',
-            ], 400);
-            return;
-        }
-
-        // Return the freshly updated user record.
+        // Return updated user
         $updated = $this->userMain->getUserById($id);
         unset($updated['password']);
 
