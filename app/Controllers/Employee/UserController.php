@@ -243,11 +243,6 @@ class UserController extends Controller
     }
 
     /**
-     * Optional: Toggle user active status (for quick enable/disable).
-     * PUT /api/users/{id}/toggle-status
-     * Requires: USER_EDIT
-     */
-    /**
      * PATCH /api/users/{id}/toggle-status
      * Toggles the user's active status (is_active).
      * Requires: USER_EDIT
@@ -275,6 +270,93 @@ class UserController extends Controller
             'success'   => true,
             'message'   => 'User status updated successfully',
             'is_active' => $result,
+        ]);
+    }
+
+    /**
+     * POST /api/users
+     * Create a new user (user_mains + user_details)
+     * Requires: USER_CREATE
+     */
+    public function createUser(): void
+    {
+        $body = json_decode(file_get_contents('php://input'), true);
+
+        if (!$body) {
+            http_response_code(400);
+            echo json_encode(['success' => false, 'message' => 'Invalid JSON body']);
+            return;
+        }
+
+        // ── Required fields ──────────────────────────────────────────────
+        $required = ['email', 'password', 'service_number', 'role_id', 'first_name', 'last_name'];
+        foreach ($required as $field) {
+            if (empty($body[$field])) {
+                http_response_code(422);
+                echo json_encode(['success' => false, 'message' => "Field '$field' is required"]);
+                return;
+            }
+        }
+
+        // ── Duplicate email check ────────────────────────────────────────
+        if ($this->userMain->findByEmail($body['email'])) {
+            http_response_code(409);
+            echo json_encode(['success' => false, 'message' => 'Email already in use']);
+            return;
+        }
+
+        // ── Split payload ────────────────────────────────────────────────
+        $mainFields = ['email', 'password', 'service_number', 'role_id'];
+        $mainData   = array_intersect_key($body, array_flip($mainFields));
+
+        $detailFields = [
+            'first_name',
+            'last_name',
+            'phone_no',
+            'nic',
+            'dob',
+            'address',
+            'gender',
+            'marital_status',
+            'blood_group',
+            'role_id',
+            'department_id',
+            'branch_id',
+            'employment_type',
+            'date_joined',
+            'probation_end_date',
+            'date_left',
+            'basic_salary',
+            'bank_account_number',
+            'tax_id',
+            'epf_no',
+            'manager_id',
+            'emergency_contact_name',
+            'emergency_contact_relationship',
+            'emergency_contact_phone',
+            'additional_details',
+            'pro_pic',
+        ];
+        $detailData = array_intersect_key($body, array_flip($detailFields));
+
+        // ── Create ───────────────────────────────────────────────────────
+        try {
+            $userId = $this->userMain->createFullUser($mainData, $detailData);
+        } catch (\Throwable $e) {
+            http_response_code(500);
+            echo json_encode([
+                'success' => false,
+                'message' => 'User creation failed',
+                'error'   => $e->getMessage(),
+            ]);
+            return;
+        }
+
+        http_response_code(201);
+        echo json_encode([
+            'success' => true,
+            'message' => 'User created successfully',
+            'user_id' => $userId,
         ]);
     }
 }

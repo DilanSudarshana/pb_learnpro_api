@@ -248,4 +248,55 @@ class UserMain extends Model
 
         return (int)$stmt->fetchColumn();
     }
+
+    /**
+     * Create user_main + user_details in a single transaction
+     * Returns new user_id or throws on failure
+     */
+    public function createFullUser(array $mainData, array $detailData): int
+    {
+        $this->db->beginTransaction();
+
+        try {
+            // 1. Insert into user_mains
+            $mainData['created_at'] = date('Y-m-d H:i:s');
+            $mainData['updated_at'] = date('Y-m-d H:i:s');
+            $mainData['is_active']  = $mainData['is_active'] ?? 1;
+            $mainData['is_delete']  = $mainData['is_delete'] ?? 0;
+            $mainData['password']   = password_hash($mainData['password'], PASSWORD_BCRYPT);
+
+            $columns    = implode(', ', array_map(fn($k) => "`$k`", array_keys($mainData)));
+            $placeHolders = implode(', ', array_fill(0, count($mainData), '?'));
+
+            $stmt = $this->db->prepare(
+                "INSERT INTO `user_mains` ($columns) VALUES ($placeHolders)"
+            );
+            $stmt->execute(array_values($mainData));
+
+            $userId = (int)$this->db->lastInsertId();
+
+            // 2. Insert into user_details with the same user_id
+            $detailData['user_id']   = $userId;
+            $detailData['createdAt'] = date('Y-m-d H:i:s');
+            $detailData['updatedAt'] = date('Y-m-d H:i:s');
+            $detailData['is_active'] = $detailData['is_active'] ?? 1;
+            $detailData['is_delete'] = $detailData['is_delete'] ?? 0;
+            $detailData['is_online'] = $detailData['is_online'] ?? 0;
+
+            $dColumns       = implode(', ', array_map(fn($k) => "`$k`", array_keys($detailData)));
+            $dPlaceholders  = implode(', ', array_fill(0, count($detailData), '?'));
+
+            $stmt = $this->db->prepare(
+                "INSERT INTO `user_details` ($dColumns) VALUES ($dPlaceholders)"
+            );
+            $stmt->execute(array_values($detailData));
+
+            $this->db->commit();
+
+            return $userId;
+        } catch (\Throwable $e) {
+            $this->db->rollBack();
+            throw $e;
+        }
+    }
 }

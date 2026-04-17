@@ -66,3 +66,13 @@ $router->put('/api/users/{id}/toggle-status', [UserController::class, 'toggleSta
     AuthMiddleware::class,
     permissionMiddleware('USER_EDIT'),
 ]);
+
+/**
+ * POST /api/users
+ * Create a new user
+ * Requires: USER_CREATE
+ */
+$router->post('/api/users', [UserController::class, 'createUser'], [
+    AuthMiddleware::class,
+    permissionMiddleware('USER_CREATE'),
+]);
