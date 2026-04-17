@@ -56,3 +56,13 @@ $router->delete('/api/users/{id}', [UserController::class, 'destroy'], [
     AuthMiddleware::class,
     permissionMiddleware('USER_DELETE'),
 ]);
+
+/**s
+ * PATCH /api/users/{id}/toggle-status
+ * Toggles the user's active status (is_active).
+ * Requires: USER_EDIT
+ */
+$router->put('/api/users/{id}/toggle-status', [UserController::class, 'toggleStatus'], [
+    AuthMiddleware::class,
+    permissionMiddleware('USER_EDIT'),
+]);

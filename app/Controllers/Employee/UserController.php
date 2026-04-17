@@ -110,11 +110,11 @@ class UserController extends Controller
             return;
         }
 
-        // ── user_mains fields ─────────────────────
+        // user_mains fields 
         $mainAllowed = ['service_number', 'role_id', 'is_active'];
         $mainData    = array_intersect_key($body, array_flip($mainAllowed));
 
-        // ── user_details fields ───────────────────
+        // user_details fields 
         $detailDenied = array_merge($mainAllowed, ['user_id', 'password', 'email']);
         $detailData   = array_diff_key($body, array_flip($detailDenied));
 
@@ -240,5 +240,35 @@ class UserController extends Controller
         header('Content-Type: application/json');
         echo json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
         exit;
+    }
+
+    /**
+     * Optional: Toggle user active status (for quick enable/disable).
+     * PUT /api/users/{id}/toggle-status
+     * Requires: USER_EDIT
+     */
+    public function toggleStatus(int $id): int
+    {
+        // Toggle directly in DB
+        $stmt = $this->db->prepare("
+        UPDATE user_mains 
+        SET is_active = 1 - is_active 
+        WHERE user_id = :id
+    ");
+
+        $stmt->execute(['id' => $id]);
+
+        // If no row affected → user not found
+        if ($stmt->rowCount() === 0) {
+            return -1;
+        }
+
+        // Get updated status
+        $stmt = $this->db->prepare("
+        SELECT is_active FROM user_mains WHERE user_id = :id
+    ");
+        $stmt->execute(['id' => $id]);
+
+        return (int)$stmt->fetchColumn();
     }
 }

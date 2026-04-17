@@ -220,4 +220,21 @@ class UserMain extends Model
 
         return $stmt->execute($values);
     }
+
+    public function toggleStatus(int $id): int
+    {
+        $user = $this->getUserById($id);
+
+        if (!$user) {
+            return -1; // user not found
+        }
+
+        $newStatus = 1 - (int)$user['is_active'];
+
+        $this->updateUserMain($id, [
+            'is_active' => $newStatus
+        ]);
+
+        return $newStatus;
+    }
 }
