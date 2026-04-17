@@ -247,28 +247,34 @@ class UserController extends Controller
      * PUT /api/users/{id}/toggle-status
      * Requires: USER_EDIT
      */
-    public function toggleStatus(int $id): int
+    /**
+     * PATCH /api/users/{id}/toggle-status
+     * Toggles the user's active status (is_active).
+     * Requires: USER_EDIT
+     */
+    public function toggleStatus(array $params): void
     {
-        // Toggle directly in DB
-        $stmt = $this->db->prepare("
-        UPDATE user_mains 
-        SET is_active = 1 - is_active 
-        WHERE user_id = :id
-    ");
+        $id = (int)($params['id'] ?? 0);
 
-        $stmt->execute(['id' => $id]);
-
-        // If no row affected → user not found
-        if ($stmt->rowCount() === 0) {
-            return -1;
+        if ($id <= 0) {
+            http_response_code(400);
+            echo json_encode(['success' => false, 'message' => 'Invalid user ID']);
+            return;
         }
 
-        // Get updated status
-        $stmt = $this->db->prepare("
-        SELECT is_active FROM user_mains WHERE user_id = :id
-    ");
-        $stmt->execute(['id' => $id]);
+        $result = $this->userMain->toggleStatus($id);
 
-        return (int)$stmt->fetchColumn();
+        if ($result === -1) {
+            http_response_code(404);
+            echo json_encode(['success' => false, 'message' => 'User not found']);
+            return;
+        }
+
+        http_response_code(200);
+        echo json_encode([
+            'success'   => true,
+            'message'   => 'User status updated successfully',
+            'is_active' => $result,
+        ]);
     }
 }

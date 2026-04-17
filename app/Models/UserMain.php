@@ -221,20 +221,31 @@ class UserMain extends Model
         return $stmt->execute($values);
     }
 
+    /**
+     * Toggle user active status
+     * Returns: 1 (active), 0 (inactive), -1 (not found)
+     */
     public function toggleStatus(int $id): int
     {
-        $user = $this->getUserById($id);
+        // Toggle directly in DB
+        $stmt = $this->db->prepare("
+        UPDATE user_mains 
+        SET is_active = 1 - is_active 
+        WHERE user_id = :id
+    ");
+        $stmt->execute(['id' => $id]);
 
-        if (!$user) {
-            return -1; // user not found
+        // If no row affected → user not found
+        if ($stmt->rowCount() === 0) {
+            return -1;
         }
 
-        $newStatus = 1 - (int)$user['is_active'];
+        // Get updated status
+        $stmt = $this->db->prepare("
+        SELECT is_active FROM user_mains WHERE user_id = :id
+    ");
+        $stmt->execute(['id' => $id]);
 
-        $this->updateUserMain($id, [
-            'is_active' => $newStatus
-        ]);
-
-        return $newStatus;
+        return (int)$stmt->fetchColumn();
     }
 }
