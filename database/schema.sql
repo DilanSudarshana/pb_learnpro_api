@@ -715,5 +715,69 @@ CREATE TABLE
     ) ENGINE = InnoDB;
 
 -- =============================================================================
+-- Training Session Table
+-- =============================================================================
+CREATE TABLE
+    training_session (
+        session_id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+        category_id INT NOT NULL, -- FIXED HERE
+        trainer_id INT UNSIGNED NOT NULL,
+        location VARCHAR(255) NOT NULL,
+        session_date DATE NOT NULL,
+        session_time TIME NOT NULL,
+        check_in TIME NULL DEFAULT NULL,
+        check_out TIME NULL DEFAULT NULL,
+        total_hours DECIMAL(5, 2) NULL DEFAULT NULL,
+        additional_details TEXT NULL DEFAULT NULL,
+        is_active TINYINT (1) NOT NULL DEFAULT 1,
+        is_delete TINYINT (1) NOT NULL DEFAULT 0,
+        created_by INT UNSIGNED NOT NULL,
+        updated_by INT UNSIGNED NULL DEFAULT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        PRIMARY KEY (session_id),
+        INDEX idx_ts_category (category_id),
+        INDEX idx_ts_trainer (trainer_id),
+        INDEX idx_ts_date (session_date),
+        CONSTRAINT fk_ts_category FOREIGN KEY (category_id) REFERENCES training_category (category_id),
+        CONSTRAINT fk_ts_trainer FOREIGN KEY (trainer_id) REFERENCES user_details (user_id),
+        CONSTRAINT fk_ts_created_by FOREIGN KEY (created_by) REFERENCES user_details (user_id),
+        CONSTRAINT fk_ts_updated_by FOREIGN KEY (updated_by) REFERENCES user_details (user_id)
+    ) ENGINE = InnoDB;
+
+INSERT INTO
+    training_session (
+        category_id,
+        trainer_id,
+        location,
+        session_date,
+        session_time,
+        check_in,
+        check_out,
+        total_hours,
+        additional_details,
+        is_active,
+        is_delete,
+        created_by,
+        updated_by
+    )
+VALUES
+    (
+        1, -- existing training_category.category_id
+        3, -- trainer (Daniel Perera)
+        'Conference Room A',
+        '2026-05-01',
+        '09:00:00',
+        '09:05:00',
+        '17:00:00',
+        8.00,
+        'Full day training on software architecture fundamentals.',
+        1,
+        0,
+        1, -- created_by (Admin Alexandra)
+        1 -- updated_by
+    );
+
+-- =============================================================================
 -- END OF SCRIPT
 -- =============================================================================
