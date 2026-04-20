@@ -697,5 +697,19 @@ VALUES
     );
 
 -- =============================================================================
+-- Training category table (for future use in course management module)
+-- =============================================================================
+CREATE TABLE
+    training_category (
+        category_id INT AUTO_INCREMENT PRIMARY KEY,
+        category_name VARCHAR(255) NOT NULL,
+        additional_details TEXT,
+        created_by INT UNSIGNED NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        CONSTRAINT fk_training_category_user FOREIGN KEY (created_by) REFERENCES user_details (user_id) ON DELETE RESTRICT ON UPDATE CASCADE
+    ) ENGINE = InnoDB;
+
+-- =============================================================================
 -- END OF SCRIPT
 -- =============================================================================
