@@ -50,14 +50,14 @@ class JwtHelper
         ]));
 
         $payload = self::base64UrlEncode(json_encode([
-            'iss'              => $_ENV['APP_URL'] ?? 'learnpro-api',
-            'iat'              => time(),
-            'exp'              => time() + self::getExpire(),
-            'user_id'          => $user['user_id'],
-            'email'            => $user['email'],
-            'role_id'          => $user['role_id'] ?? null,
-            'service_number'   => $user['service_number'] ?? null,
-            'role_permissions' => $permissions,
+            'iss'            => $_ENV['APP_URL'] ?? 'learnpro-api',
+            'iat'            => time(),
+            'exp'            => time() + self::getExpire(),
+            'user_id'        => $user['user_id'],
+            'email'          => $user['email'],
+            'role_id'        => $user['role_id']        ?? null,
+            'service_number' => $user['service_number'] ?? null,
+            'permissions'    => self::formatPermissions($permissions),  // ← structured
         ]));
 
         $signature = self::base64UrlEncode(
@@ -65,6 +65,31 @@ class JwtHelper
         );
 
         return "{$header}.{$payload}.{$signature}";
+    }
+
+    // ── Helper ────────────────────────────────────────────────────────────────────
+
+    private static function formatPermissions(array $perms): array
+    {
+        $result = [];
+
+        foreach ($perms as $perm) {
+            $perm = trim($perm);
+
+            if (!str_contains($perm, '_')) {
+                $result[strtolower($perm)]['enabled'] = true;
+                continue;
+            }
+
+            // Split on FIRST underscore only
+            // "USER_VIEW"          → module=user,    action=view
+            // "PROFILE_MANAGEMENT" → module=profile, action=management
+            [$module, $action] = explode('_', $perm, 2);
+
+            $result[strtolower($module)][strtolower($action)] = true;
+        }
+
+        return $result;
     }
 
     /**
