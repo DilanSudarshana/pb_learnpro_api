@@ -705,9 +705,13 @@ CREATE TABLE
         category_name VARCHAR(255) NOT NULL,
         additional_details TEXT,
         created_by INT UNSIGNED NOT NULL,
+        updated_by INT UNSIGNED NULL,
+        is_active TINYINT (1) NOT NULL DEFAULT 1,
+        is_delete TINYINT (1) NOT NULL DEFAULT 0,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-        CONSTRAINT fk_training_category_user FOREIGN KEY (created_by) REFERENCES user_details (user_id) ON DELETE RESTRICT ON UPDATE CASCADE
+        CONSTRAINT fk_training_category_created_by FOREIGN KEY (created_by) REFERENCES user_details (user_id) ON DELETE RESTRICT ON UPDATE CASCADE,
+        CONSTRAINT fk_training_category_updated_by FOREIGN KEY (updated_by) REFERENCES user_details (user_id) ON DELETE SET NULL ON UPDATE CASCADE
     ) ENGINE = InnoDB;
 
 -- =============================================================================

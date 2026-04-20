@@ -23,6 +23,7 @@ $routeFiles = [
     'roleRoutes.php',
     'permissionRoutes.php',
     'rolePermissionRoutes.php',
+    'trainningCategoryRoutes.php',
 ];
 
 foreach ($routeFiles as $file) {

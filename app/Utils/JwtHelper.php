@@ -130,4 +130,32 @@ class JwtHelper
 
         return $data;
     }
+
+    public static function getAuthUserFromRequest(): array
+    {
+        $headers = getallheaders();
+
+        if (!isset($headers['Authorization'])) {
+            throw new \RuntimeException('Authorization header missing');
+        }
+
+        $authHeader = $headers['Authorization'];
+
+        if (!str_starts_with($authHeader, 'Bearer ')) {
+            throw new \RuntimeException('Invalid authorization header');
+        }
+
+        $token = trim(substr($authHeader, 7));
+
+        $payload = self::verifyToken($token);
+
+        // Normalize structure (VERY IMPORTANT FIX)
+        return [
+            'user_id'        => $payload['user_id'] ?? null,
+            'email'          => $payload['email'] ?? null,
+            'role_id'        => $payload['role_id'] ?? null,
+            'service_number' => $payload['service_number'] ?? null,
+            'permissions'    => $payload['permissions'] ?? [],
+        ];
+    }
 }
