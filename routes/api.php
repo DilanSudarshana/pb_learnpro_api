@@ -20,12 +20,14 @@ require_once __DIR__ . '/helpers.php';
 $routeFiles = [
     'Auth/authRoutes.php',
     'Users/userRoutes.php',
+    'Users/userProfileRoutes.php', 
     'System/roleRoutes.php',
     'System/permissionRoutes.php',
     'System/rolePermissionRoutes.php',
     'Trainings/trainingCategoryRoutes.php',
     'Trainings/trainingSessionRoutes.php',
     'Trainings/trainingAllocationRoutes.php',
+    
 ];
 
 foreach ($routeFiles as $file) {
