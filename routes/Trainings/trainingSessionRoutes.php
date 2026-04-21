@@ -8,13 +8,13 @@ declare(strict_types=1);
  * ─────────────────────────────────────────────────────────────────────────────
  *
  * Prefix    : /api/training-sessions
- * Controller: App\Controllers\Tranings\TrainingSessionController
+ * Controller: App\Controllers\Trainings\TrainingSessionController
  *
  * All routes require a valid JWT (AuthMiddleware).
  * Each route additionally requires a specific permission.
  */
 
-use App\Controllers\Tranings\TrainingSessionController;
+use App\Controllers\Trainings\TrainingSessionController;
 use App\Middleware\AuthMiddleware;
 
 /**

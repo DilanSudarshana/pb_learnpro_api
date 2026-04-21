@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Controllers\Tranings;
+namespace App\Controllers\Trainings;
 
 use App\Core\Controller;
 use App\Models\TrainingCategory;

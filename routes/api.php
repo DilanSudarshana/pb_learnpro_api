@@ -18,13 +18,14 @@ require_once __DIR__ . '/helpers.php';
 
 // Route groups — add new files here as the project grows
 $routeFiles = [
-    'authRoutes.php',
-    'userRoutes.php',
-    'roleRoutes.php',
-    'permissionRoutes.php',
-    'rolePermissionRoutes.php',
-    'trainningCategoryRoutes.php',
-    'trainingSessionRoutes.php',
+    'Auth/authRoutes.php',
+    'Users/userRoutes.php',
+    'System/roleRoutes.php',
+    'System/permissionRoutes.php',
+    'System/rolePermissionRoutes.php',
+    'Trainings/trainingCategoryRoutes.php',
+    'Trainings/trainingSessionRoutes.php',
+    'Trainings/trainingAllocationRoutes.php',
 ];
 
 foreach ($routeFiles as $file) {
