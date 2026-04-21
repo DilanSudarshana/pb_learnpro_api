@@ -81,10 +81,11 @@ class JwtHelper
                 continue;
             }
 
-            // Split on FIRST underscore only
-            // "USER_VIEW"          → module=user,    action=view
-            // "PROFILE_MANAGEMENT" → module=profile, action=management
-            [$module, $action] = explode('_', $perm, 2);
+            // Split on LAST underscore
+            $lastUnderscorePos = strrpos($perm, '_');
+
+            $module = substr($perm, 0, $lastUnderscorePos);
+            $action = substr($perm, $lastUnderscorePos + 1);
 
             $result[strtolower($module)][strtolower($action)] = true;
         }

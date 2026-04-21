@@ -779,5 +779,28 @@ VALUES
     );
 
 -- =============================================================================
+-- Training allocation table 
+-- =============================================================================
+CREATE TABLE
+    training_allocations (
+        training_id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+        trainee_id INT UNSIGNED NOT NULL,
+        session_id INT UNSIGNED NOT NULL,
+        created_by INT UNSIGNED NOT NULL,
+        training_date DATE NOT NULL,
+        start_time TIME NULL,
+        end_time TIME NULL,
+        status TINYINT UNSIGNED DEFAULT 0,
+        is_active TINYINT (1) DEFAULT 1,
+        is_delete TINYINT (1) DEFAULT 0,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        -- Foreign Keys
+        CONSTRAINT fk_training_allocation_trainee FOREIGN KEY (trainee_id) REFERENCES user_details (user_id) ON DELETE RESTRICT ON UPDATE CASCADE,
+        CONSTRAINT fk_training_allocation_session FOREIGN KEY (session_id) REFERENCES training_session (session_id) ON DELETE RESTRICT ON UPDATE CASCADE,
+        CONSTRAINT fk_training_allocation_user FOREIGN KEY (created_by) REFERENCES user_details (user_id) ON DELETE RESTRICT ON UPDATE CASCADE
+    );
+
+-- =============================================================================
 -- END OF SCRIPT
 -- =============================================================================
