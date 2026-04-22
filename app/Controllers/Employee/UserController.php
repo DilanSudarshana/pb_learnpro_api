@@ -305,6 +305,16 @@ class UserController extends Controller
             return;
         }
 
+        // ── Duplicate service number check ───────────────────────────────
+        if ($this->userMain->findByServiceNumber($body['service_number'])) {
+            http_response_code(409);
+            echo json_encode([
+                'success' => false,
+                'message' => 'Service number already in use'
+            ]);
+            return;
+        }
+
         // ── Split payload ────────────────────────────────────────────────
         $mainFields = ['email', 'password', 'service_number', 'role_id'];
         $mainData   = array_intersect_key($body, array_flip($mainFields));
@@ -313,29 +323,17 @@ class UserController extends Controller
             'first_name',
             'last_name',
             'phone_no',
-            'nic',
-            'dob',
-            'address',
-            'gender',
-            'marital_status',
-            'blood_group',
+            'profile_picture',
+            'bio',
             'role_id',
             'department_id',
             'branch_id',
-            'employment_type',
             'date_joined',
-            'probation_end_date',
-            'date_left',
-            'basic_salary',
-            'bank_account_number',
-            'tax_id',
-            'epf_no',
-            'manager_id',
-            'emergency_contact_name',
-            'emergency_contact_relationship',
-            'emergency_contact_phone',
-            'additional_details',
-            'pro_pic',
+            'is_active',
+            'is_delete',
+            'is_online',
+            'created_at',
+            'updated_at',
         ];
         $detailData = array_intersect_key($body, array_flip($detailFields));
 

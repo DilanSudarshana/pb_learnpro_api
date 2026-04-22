@@ -26,6 +26,25 @@ class UserMain extends Model
     }
 
     /**
+     * Find a user by their service number
+     */
+    public function findByServiceNumber(string $serviceNumber)
+    {
+        $stmt = $this->db->prepare("
+        SELECT user_id 
+        FROM user_mains 
+        WHERE service_number = :service_number 
+        LIMIT 1
+    ");
+
+        $stmt->execute([
+            'service_number' => $serviceNumber
+        ]);
+
+        return $stmt->fetch();
+    }
+
+    /**
      * Create a new user with given data.
      * Sets created_at / updated_at automatically.
      */
@@ -65,36 +84,21 @@ class UserMain extends Model
             um.password,
 
             ud.user_id AS detail_user_id,
+            ud.user_id,
             ud.first_name,
             ud.last_name,
             ud.phone_no,
-            ud.nic,
-            ud.dob,
-            ud.address,
-            ud.gender,
-            ud.marital_status,
-            ud.blood_group,
+            ud.profile_picture,
+            ud.bio,
+            ud.role_id,
             ud.department_id,
             ud.branch_id,
-            ud.employment_type,
             ud.date_joined,
-            ud.probation_end_date,
-            ud.date_left,
-            ud.basic_salary,
-            ud.bank_account_number,
-            ud.tax_id,
-            ud.epf_no,
-            ud.manager_id,
-            ud.emergency_contact_name,
-            ud.emergency_contact_relationship,
-            ud.emergency_contact_phone,
-            ud.additional_details,
-            ud.pro_pic,
             ud.is_active,
             ud.is_delete,
             ud.is_online,
-            ud.createdAt,
-            ud.updatedAt
+            ud.created_at,
+            ud.updated_at
 
         FROM user_mains um
         INNER JOIN user_details ud 
@@ -123,24 +127,21 @@ class UserMain extends Model
             um.service_number,
             um.role_id,
 
-            ud.user_id AS detail_user_id,
+           ud.user_id AS detail_user_id,
             ud.first_name,
             ud.last_name,
             ud.phone_no,
-            ud.nic,
-            ud.dob,
-            ud.address,
-            ud.gender,
-            ud.marital_status,
-            ud.blood_group,
+            ud.profile_picture,
+            ud.bio,
+            ud.role_id,
             ud.department_id,
             ud.branch_id,
-            ud.employment_type,
             ud.date_joined,
-            ud.basic_salary,
-            ud.manager_id,
             ud.is_active,
-            ud.is_delete
+            ud.is_delete,
+            ud.is_online,
+            ud.created_at,
+            ud.updated_at
 
         FROM user_mains um
         LEFT JOIN user_details ud 
@@ -277,8 +278,8 @@ class UserMain extends Model
 
             // 2. Insert into user_details with the same user_id
             $detailData['user_id']   = $userId;
-            $detailData['createdAt'] = date('Y-m-d H:i:s');
-            $detailData['updatedAt'] = date('Y-m-d H:i:s');
+            $detailData['created_at'] = date('Y-m-d H:i:s');
+            $detailData['updated_at'] = date('Y-m-d H:i:s');
             $detailData['is_active'] = $detailData['is_active'] ?? 1;
             $detailData['is_delete'] = $detailData['is_delete'] ?? 0;
             $detailData['is_online'] = $detailData['is_online'] ?? 0;

@@ -99,7 +99,7 @@ class UserDetails extends Model
             return false;
         }
 
-        $setParts[] = '`updatedAt` = ?';
+        $setParts[] = '`updated_AT` = ?';
         $values[]   = date('Y-m-d H:i:s');
         $values[]   = $userMainId;
 

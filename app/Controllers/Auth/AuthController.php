@@ -193,29 +193,26 @@ class AuthController extends Controller
                 ],
                 // ── user_details ───────────────────────────────────────────────
                 [
-                    'first_name'                     => $firstName,
-                    'last_name'                      => $lastName,
-                    'phone_no'                       => $body['phone_no']                       ?? null,
-                    'nic'                            => $body['nic']                            ?? null,
-                    'dob'                            => $body['dob']                            ?? null,
-                    'address'                        => $body['address']                        ?? null,
-                    'gender'                         => $body['gender']                         ?? null,
-                    'marital_status'                 => $body['marital_status']                 ?? null,
-                    'blood_group'                    => $body['blood_group']                    ?? null,
-                    'department_id'                  => $body['department_id']                  ?? null,
-                    'branch_id'                      => $body['branch_id']                      ?? null,
-                    'employment_type'                => $body['employment_type']                ?? null,
-                    'date_joined'                    => $body['date_joined']                    ?? date('Y-m-d'),
-                    'probation_end_date'             => $body['probation_end_date']             ?? null,
-                    'basic_salary'                   => $body['basic_salary']                   ?? null,
-                    'bank_account_number'            => $body['bank_account_number']            ?? null,
-                    'tax_id'                         => $body['tax_id']                         ?? null,
-                    'epf_no'                         => $body['epf_no']                         ?? null,
-                    'manager_id'                     => $body['manager_id']                     ?? null,
-                    'emergency_contact_name'         => $body['emergency_contact_name']         ?? null,
-                    'emergency_contact_relationship' => $body['emergency_contact_relationship'] ?? null,
-                    'emergency_contact_phone'        => $body['emergency_contact_phone']        ?? null,
-                    'additional_details'             => $body['additional_details']             ?? null,
+                    'first_name'       => $firstName,
+                    'last_name'        => $lastName,
+                    'phone_no'         => $body['phone_no'] ?? null,
+
+                    // Profile
+                    'profile_picture'  => $body['profile_picture'] ?? null,
+                    'bio'              => $body['bio'] ?? null,
+
+                    // Org mapping
+                    'role_id'          => $body['role_id'] ?? null,
+                    'department_id'    => $body['department_id'] ?? null,
+                    'branch_id'        => $body['branch_id'] ?? null,
+
+                    // LMS context
+                    'date_joined'      => $body['date_joined'] ?? date('Y-m-d'),
+
+                    // Flags (optional but safe for insert/update logic)
+                    'is_active'        => $body['is_active'] ?? 1,
+                    'is_delete'        => $body['is_delete'] ?? 0,
+                    'is_online'        => $body['is_online'] ?? 0,
                 ]
             );
         } catch (\Throwable $e) {
