@@ -27,6 +27,8 @@ $routeFiles = [
     'Trainings/trainingCategoryRoutes.php',
     'Trainings/trainingSessionRoutes.php',
     'Trainings/trainingAllocationRoutes.php',
+    'Trainings/userFeedbackRoutes.php',
+    'LearningMaterials/learningMaterialRoutes.php',
     
 ];
 

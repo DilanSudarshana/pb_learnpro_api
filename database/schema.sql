@@ -704,5 +704,51 @@ CREATE TABLE
     );
 
 -- =============================================================================
+-- User feedback table 
+-- =============================================================================
+CREATE TABLE
+    IF NOT EXISTS `user_feedback` (
+        `review_id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
+        `user_id` INT UNSIGNED NOT NULL,
+        `training_id` INT UNSIGNED NOT NULL,
+        `rating` TINYINT NOT NULL COMMENT '1–5 star rating',
+        `comment` TEXT DEFAULT NULL,
+        `is_active` TINYINT (1) NOT NULL DEFAULT 1,
+        `is_delete` TINYINT (1) NOT NULL DEFAULT 0,
+        `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        `created_by` INT UNSIGNED DEFAULT NULL,
+        `updated_by` INT UNSIGNED DEFAULT NULL,
+        PRIMARY KEY (`review_id`),
+        CONSTRAINT `fk_uf_user` FOREIGN KEY (`user_id`) REFERENCES `user_details` (`user_id`) ON DELETE CASCADE ON UPDATE CASCADE,
+        CONSTRAINT `fk_uf_training` FOREIGN KEY (`training_id`) REFERENCES `training_session` (`session_id`) ON DELETE CASCADE ON UPDATE CASCADE,
+        CONSTRAINT `fk_uf_created_by` FOREIGN KEY (`created_by`) REFERENCES `user_details` (`user_id`) ON DELETE SET NULL ON UPDATE CASCADE,
+        CONSTRAINT `fk_uf_updated_by` FOREIGN KEY (`updated_by`) REFERENCES `user_details` (`user_id`) ON DELETE SET NULL ON UPDATE CASCADE
+    );
+
+-- =============================================================================
+-- learning materials table 
+-- =============================================================================
+CREATE TABLE
+    learning_materials (
+        material_id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+        training_id INT UNSIGNED NOT NULL,
+        material_type VARCHAR(50) NOT NULL,
+        file_name VARCHAR(255) NOT NULL,
+        file_path VARCHAR(500) NOT NULL,
+        additional_details TEXT DEFAULT NULL,
+        uploaded_by INT UNSIGNED NOT NULL,
+        is_active TINYINT (1) NOT NULL DEFAULT 1,
+        is_delete TINYINT (1) NOT NULL DEFAULT 0,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        PRIMARY KEY (material_id),
+        KEY idx_learning_materials_training (training_id),
+        KEY idx_learning_materials_uploaded_by (uploaded_by),
+        CONSTRAINT fk_learning_materials_training FOREIGN KEY (training_id) REFERENCES training_session (session_id) ON DELETE CASCADE,
+        CONSTRAINT fk_learning_materials_uploaded_by FOREIGN KEY (uploaded_by) REFERENCES user_details (user_id) ON DELETE RESTRICT
+    );
+
+-- =============================================================================
 -- END OF SCRIPT
 -- =============================================================================
