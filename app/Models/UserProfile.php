@@ -19,67 +19,49 @@ class UserProfile extends Model
     public function getProfile(int $userId): ?array
     {
         $sql = "
-            SELECT
-                -- Identity
-                um.user_id,
-                um.email,
-                um.service_number,
-                um.is_active,
+        SELECT
+            -- Identity
+            um.user_id,
+            um.email,
+            um.service_number,
+            um.is_active,
 
-                -- Personal
-                ud.first_name,
-                ud.last_name,
-                TRIM(CONCAT(ud.first_name, ' ', ud.last_name)) AS full_name,
-                ud.phone_no,
-                ud.nic,
-                ud.dob,
-                ud.address,
-                ud.gender,
-                ud.marital_status,
-                ud.blood_group,
-                ud.pro_pic,
-                ud.additional_details,
+            -- Personal (LMS)
+            ud.first_name,
+            ud.last_name,
+            CONCAT(ud.first_name, ' ', ud.last_name) AS full_name,
+            ud.phone_no,
+            ud.profile_picture,
+            ud.bio,
 
-                -- Employment
-                ud.employment_type,
-                ud.date_joined,
-                ud.probation_end_date,
-                ud.date_left,
-                ud.basic_salary,
-                ud.bank_account_number,
-                ud.tax_id,
-                ud.epf_no,
+            -- Org structure
+            ud.role_id,
+            r.role_name,
+            ud.department_id,
+            ud.branch_id,
 
-                -- Role
-                ud.role_id,
-                r.role_name,
+            -- LMS meta
+            ud.date_joined,
+            ud.is_active AS profile_active,
+            ud.is_delete,
+            ud.is_online,
 
-                -- Manager
-                ud.manager_id,
-                TRIM(CONCAT(mgr.first_name, ' ', mgr.last_name)) AS manager_name,
+            ud.created_at,
+            ud.updated_at
 
-                -- Emergency Contact
-                ud.emergency_contact_name,
-                ud.emergency_contact_relationship,
-                ud.emergency_contact_phone,
+        FROM user_mains um
+        INNER JOIN user_details ud ON ud.user_id = um.user_id
+        LEFT JOIN user_roles r ON r.role_id = ud.role_id
 
-                -- Meta
-                ud.is_online,
-                ud.createdAt AS created_at,
-                ud.updatedAt AS updated_at
-
-            FROM user_mains um
-            INNER JOIN user_details  ud  ON ud.user_id      = um.user_id
-            LEFT  JOIN user_roles         r   ON r.role_id       = ud.role_id
-            LEFT  JOIN user_details  mgr ON mgr.user_id     = ud.manager_id
-            WHERE um.user_id   = :user_id
-              AND um.is_delete = 0
-              AND ud.is_delete = 0
-            LIMIT 1
-        ";
+        WHERE um.user_id = :user_id
+          AND um.is_delete = 0
+          AND ud.is_delete = 0
+        LIMIT 1
+    ";
 
         $stmt = $this->db->prepare($sql);
         $stmt->execute([':user_id' => $userId]);
+
         $result = $stmt->fetch(\PDO::FETCH_ASSOC);
 
         return $result ?: null;
@@ -130,17 +112,16 @@ class UserProfile extends Model
             'first_name',
             'last_name',
             'phone_no',
-            'nic',
-            'dob',
-            'address',
-            'gender',
-            'marital_status',
-            'blood_group',
-            'emergency_contact_name',
-            'emergency_contact_relationship',
-            'emergency_contact_phone',
-            'additional_details',
-            'updatedAt',
+            'profile_picture',
+            'bio',
+            'role_id',
+            'department_id',
+            'branch_id',
+            'date_joined',
+            'is_active',
+            'is_delete',
+            'is_online',
+            'updated_at'
         ];
 
         $fields = [];

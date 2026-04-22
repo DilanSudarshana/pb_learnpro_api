@@ -77,16 +77,17 @@ class UserProfileController extends Controller
             'first_name',
             'last_name',
             'phone_no',
-            'nic',
-            'dob',
-            'address',
-            'gender',
-            'marital_status',
-            'blood_group',
-            'emergency_contact_name',
-            'emergency_contact_relationship',
-            'emergency_contact_phone',
-            'additional_details',
+            'profile_picture',
+            'bio',
+            'role_id',
+            'department_id',
+            'branch_id',
+            'date_joined',
+            'is_active',
+            'is_delete',
+            'is_online',
+            'created_at',
+            'updated_at'
         ];
 
         // Separate incoming body fields into their respective table buckets
