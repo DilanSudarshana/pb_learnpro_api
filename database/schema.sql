@@ -738,6 +738,7 @@ CREATE TABLE
         file_path VARCHAR(500) NOT NULL,
         additional_details TEXT DEFAULT NULL,
         uploaded_by INT UNSIGNED NOT NULL,
+        updated_by INT UNSIGNED DEFAULT NULL,
         is_active TINYINT (1) NOT NULL DEFAULT 1,
         is_delete TINYINT (1) NOT NULL DEFAULT 0,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -745,8 +746,42 @@ CREATE TABLE
         PRIMARY KEY (material_id),
         KEY idx_learning_materials_training (training_id),
         KEY idx_learning_materials_uploaded_by (uploaded_by),
+        KEY idx_learning_materials_updated_by (updated_by),
         CONSTRAINT fk_learning_materials_training FOREIGN KEY (training_id) REFERENCES training_session (session_id) ON DELETE CASCADE,
-        CONSTRAINT fk_learning_materials_uploaded_by FOREIGN KEY (uploaded_by) REFERENCES user_details (user_id) ON DELETE RESTRICT
+        CONSTRAINT fk_learning_materials_uploaded_by FOREIGN KEY (uploaded_by) REFERENCES user_details (user_id) ON DELETE RESTRICT,
+        CONSTRAINT fk_learning_materials_updated_by FOREIGN KEY (updated_by) REFERENCES user_details (user_id) ON DELETE SET NULL
+    );
+
+-- =============================================================================
+-- Training attendance table
+-- =============================================================================
+CREATE TABLE
+    training_attendance (
+        attendance_id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+        training_allocation_id INT UNSIGNED NOT NULL,
+        user_id INT UNSIGNED NOT NULL,
+        created_by INT UNSIGNED NOT NULL,
+        updated_by INT UNSIGNED DEFAULT NULL,
+        attendance_date DATE NOT NULL,
+        in_time TIME DEFAULT NULL,
+        out_time TIME DEFAULT NULL,
+        attendance_type ENUM ('BY_USER', 'MANUAL') NOT NULL DEFAULT 'BY_USER',
+        status TINYINT NOT NULL DEFAULT 0 COMMENT '0=pending,1=present,2=absent,3=late,4=half-day,5=leave',
+        is_marked TINYINT (1) NOT NULL DEFAULT 0,
+        is_late TINYINT (1) NOT NULL DEFAULT 0,
+        is_early_leave TINYINT (1) NOT NULL DEFAULT 0,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        PRIMARY KEY (attendance_id),
+        UNIQUE KEY uq_allocation_user_date (training_allocation_id, user_id, attendance_date),
+        KEY idx_attendance_allocations (training_allocation_id),
+        KEY idx_attendance_user (user_id),
+        KEY idx_attendance_created_by (created_by),
+        KEY idx_attendance_updated_by (updated_by),
+        CONSTRAINT fk_attendance_allocation FOREIGN KEY (training_allocation_id) REFERENCES training_allocations (training_id) ON DELETE CASCADE,
+        CONSTRAINT fk_attendance_user FOREIGN KEY (user_id) REFERENCES user_details (user_id) ON DELETE CASCADE,
+        CONSTRAINT fk_attendance_created_by FOREIGN KEY (created_by) REFERENCES user_details (user_id) ON DELETE RESTRICT,
+        CONSTRAINT fk_attendance_updated_by FOREIGN KEY (updated_by) REFERENCES user_details (user_id) ON DELETE SET NULL
     );
 
 -- =============================================================================
