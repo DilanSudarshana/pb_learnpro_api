@@ -9,7 +9,7 @@ use App\Core\Model;
 class TrainingAllocation extends Model
 {
     protected string $table      = 'training_allocations';
-    protected string $primaryKey = 'training_id';
+    protected string $primaryKey = 'training_allocation_id';
 
     /**
      * Fetch all active (non-deleted) allocations with related details.
@@ -18,7 +18,7 @@ class TrainingAllocation extends Model
     {
         $sql = "
             SELECT
-                ta.training_id,
+                ta.training_allocation_id,
                 ta.status,
                 ta.is_active,
                 ta.created_at,
@@ -63,7 +63,7 @@ class TrainingAllocation extends Model
     {
         $sql = "
             SELECT
-                ta.training_id,
+                ta.training_allocation_id,
                 ta.status,
                 ta.is_active,
                 ta.created_at,
@@ -92,7 +92,7 @@ class TrainingAllocation extends Model
             LEFT JOIN training_session ts      ON ts.session_id   = ta.session_id
             LEFT JOIN training_category tc     ON tc.category_id  = ts.category_id
             LEFT JOIN user_details     creator ON creator.user_id = ta.created_by
-            WHERE ta.training_id = :id
+            WHERE ta.training_allocation_id = :id
               AND ta.is_delete   = 0
             LIMIT 1
         ";
@@ -111,7 +111,7 @@ class TrainingAllocation extends Model
     {
         $sql  = "UPDATE {$this->table}
                  SET is_delete = 1, updated_at = :updated_at
-                 WHERE training_id = :id";
+                 WHERE training_allocation_id = :id";
         $stmt = $this->db->prepare($sql);
         return $stmt->execute([
             ':id'         => $id,

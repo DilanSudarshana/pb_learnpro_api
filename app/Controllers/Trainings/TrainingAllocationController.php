@@ -95,7 +95,7 @@ class TrainingAllocationController extends Controller
             'updated_at'    => date('Y-m-d H:i:s'),
         ]);
 
-        $this->json(['message' => 'Training allocation created', 'training_id' => $id], 201);
+        $this->json(['message' => 'Training allocation created', 'training_allocation_id' => $id], 201);
     }
 
     /**

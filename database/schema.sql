@@ -685,7 +685,7 @@ VALUES
 -- =============================================================================
 CREATE TABLE
     training_allocations (
-        training_id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+        training_allocation_id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
         trainee_id INT UNSIGNED NOT NULL,
         session_id INT UNSIGNED NOT NULL,
         created_by INT UNSIGNED NOT NULL,
@@ -768,6 +768,8 @@ CREATE TABLE
         attendance_type ENUM ('BY_USER', 'MANUAL') NOT NULL DEFAULT 'BY_USER',
         status TINYINT NOT NULL DEFAULT 0 COMMENT '0=pending,1=present,2=absent,3=late,4=half-day,5=leave',
         is_marked TINYINT (1) NOT NULL DEFAULT 0,
+        is_active TINYINT (1) NOT NULL DEFAULT 0,
+        is_delete TINYINT (1) NOT NULL DEFAULT 0,
         is_late TINYINT (1) NOT NULL DEFAULT 0,
         is_early_leave TINYINT (1) NOT NULL DEFAULT 0,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -778,7 +780,7 @@ CREATE TABLE
         KEY idx_attendance_user (user_id),
         KEY idx_attendance_created_by (created_by),
         KEY idx_attendance_updated_by (updated_by),
-        CONSTRAINT fk_attendance_allocation FOREIGN KEY (training_allocation_id) REFERENCES training_allocations (training_id) ON DELETE CASCADE,
+        CONSTRAINT fk_attendance_allocation FOREIGN KEY (training_allocation_id) REFERENCES training_allocations (training_allocation_id) ON DELETE CASCADE,
         CONSTRAINT fk_attendance_user FOREIGN KEY (user_id) REFERENCES user_details (user_id) ON DELETE CASCADE,
         CONSTRAINT fk_attendance_created_by FOREIGN KEY (created_by) REFERENCES user_details (user_id) ON DELETE RESTRICT,
         CONSTRAINT fk_attendance_updated_by FOREIGN KEY (updated_by) REFERENCES user_details (user_id) ON DELETE SET NULL
