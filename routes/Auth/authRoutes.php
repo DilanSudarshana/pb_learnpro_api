@@ -52,3 +52,11 @@ $router->get('/api/auth/profile', [AuthController::class, 'profile'], [
  * registration — add AuthMiddleware + permission if you want it protected).
  */
 $router->post('/api/auth/register', [AuthController::class, 'register']);
+
+/**
+ * POST /api/auth/logout
+ * Logs out the authenticated user. Client should clear token from storage.
+ */
+$router->post('/api/auth/logout', [AuthController::class, 'logout'], [
+    AuthMiddleware::class,
+]);

@@ -248,4 +248,45 @@ class AuthController extends Controller
             ],
         ], 201);
     }
+
+    /**
+     * POST /api/auth/logout
+     * Logs out the authenticated user.
+     * 
+     * Since JWT is stateless, this endpoint primarily serves as a client-side
+     * logout confirmation. The client should remove the token from localStorage.
+     * 
+     * Optional: You can implement token blacklisting here if needed.
+     */
+    public function logout(): void
+    {
+        $user = $_REQUEST['auth_user'] ?? null;
+
+        if (!$user) {
+            $this->json(['message' => 'Already logged out'], 200);
+            return;
+        }
+
+        // Optional: Add token to blacklist table if you want server-side invalidation
+        // $token = $_REQUEST['auth_token'] ?? null;
+        // if ($token) {
+        //     $this->blacklistToken($token);
+        // }
+
+        // Optional: Update user status to offline
+        try {
+            $userId = (int) ($user['user_id'] ?? 0);
+            if ($userId > 0) {
+                $this->detailModel->update($userId, ['is_online' => 0]);
+            }
+        } catch (\Throwable $e) {
+            // Log error but don't fail logout
+            error_log('Failed to update user online status: ' . $e->getMessage());
+        }
+
+        $this->json([
+            'message' => 'Logout successful',
+            'user_id' => $user['user_id'] ?? null,
+        ]);
+    }
 }

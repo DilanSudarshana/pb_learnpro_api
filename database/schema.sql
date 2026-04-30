@@ -786,6 +786,100 @@ CREATE TABLE
         CONSTRAINT fk_attendance_updated_by FOREIGN KEY (updated_by) REFERENCES user_details (user_id) ON DELETE SET NULL
     );
 
+-- ─────────────────────────────────────────────────────────────────────────────
+-- TABLE 1: training_quizzes
+-- ─────────────────────────────────────────────────────────────────────────────
+CREATE TABLE
+    `training_quizzes` (
+        `quiz_id` INT (11) NOT NULL AUTO_INCREMENT,
+        `training_id` INT (11) NOT NULL,
+        `title` VARCHAR(255) NOT NULL,
+        `time_limit` INT (11) NULL DEFAULT NULL COMMENT 'Time limit in minutes',
+        `total_marks` INT (11) NOT NULL DEFAULT 0,
+        `is_active` TINYINT (1) NOT NULL DEFAULT 1,
+        `is_delete` TINYINT (1) NOT NULL DEFAULT 0,
+        `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        `created_by` INT (11) NULL DEFAULT NULL,
+        `updated_by` INT (11) NULL DEFAULT NULL,
+        PRIMARY KEY (`quiz_id`)
+    ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = 'Main quiz table linked to a training session';
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- TABLE 2: quiz_question_allocations
+-- Composite PK: quiz_id + question_id
+-- ─────────────────────────────────────────────────────────────────────────────
+CREATE TABLE
+    `quiz_question_allocations` (
+        `quiz_id` INT (11) NOT NULL,
+        `question_id` INT (11) NOT NULL,
+        `is_active` TINYINT (1) NOT NULL DEFAULT 1,
+        `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        PRIMARY KEY (`quiz_id`, `question_id`),
+        CONSTRAINT `fk_qqa_quiz_id` FOREIGN KEY (`quiz_id`) REFERENCES `training_quizzes` (`quiz_id`) ON UPDATE CASCADE ON DELETE CASCADE,
+        CONSTRAINT `fk_qqa_question_id` FOREIGN KEY (`question_id`) REFERENCES `quiez_questions` (`question_id`) ON UPDATE CASCADE ON DELETE CASCADE
+    ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = 'Allocated questions per quiz';
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- TABLE 1: quiez_questions
+-- ─────────────────────────────────────────────────────────────────────────────
+CREATE TABLE
+    `quiez_questions` (
+        `question_id` INT (11) NOT NULL AUTO_INCREMENT,
+        `question_text` TEXT NOT NULL,
+        `question_type` ENUM ('MCQ', 'True/False', 'Short Answer') NOT NULL,
+        `marks` INT (11) NOT NULL DEFAULT 0,
+        `order_no` INT (11) NOT NULL DEFAULT 0,
+        `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        `is_active` TINYINT (1) NOT NULL DEFAULT 1,
+        `is_delete` TINYINT (1) NOT NULL DEFAULT 0,
+        `created_by` INT (11) NULL DEFAULT NULL,
+        `updated_by` INT (11) NULL DEFAULT NULL,
+        PRIMARY KEY (`question_id`)
+    ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- TABLE 2: quiez_question_options
+-- ─────────────────────────────────────────────────────────────────────────────
+CREATE TABLE
+    `quiez_question_options` (
+        `option_id` INT (11) NOT NULL AUTO_INCREMENT,
+        `question_id` INT (11) NOT NULL,
+        `option_label` VARCHAR(10) NULL DEFAULT NULL,
+        `option_text` VARCHAR(500) NOT NULL,
+        `is_correct` TINYINT (1) NOT NULL DEFAULT 0,
+        `order_no` INT (11) NOT NULL DEFAULT 0,
+        `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        `is_active` TINYINT (1) NOT NULL DEFAULT 1,
+        `is_delete` TINYINT (1) NOT NULL DEFAULT 0,
+        `created_by` INT (11) NULL DEFAULT NULL,
+        `updated_by` INT (11) NULL DEFAULT NULL,
+        PRIMARY KEY (`option_id`),
+        CONSTRAINT `fk_qqo_question_id` FOREIGN KEY (`question_id`) REFERENCES `quiez_questions` (`question_id`) ON UPDATE CASCADE ON DELETE CASCADE
+    ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- TABLE 3: quiez_question_short_answers
+-- ─────────────────────────────────────────────────────────────────────────────
+CREATE TABLE
+    `quiez_question_short_answers` (
+        `short_answer_id` INT (11) NOT NULL AUTO_INCREMENT,
+        `question_id` INT (11) NOT NULL,
+        `expected_answer` TEXT NULL DEFAULT NULL,
+        `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        `is_active` TINYINT (1) NOT NULL DEFAULT 1,
+        `is_delete` TINYINT (1) NOT NULL DEFAULT 0,
+        `created_by` INT (11) NULL DEFAULT NULL,
+        `updated_by` INT (11) NULL DEFAULT NULL,
+        PRIMARY KEY (`short_answer_id`),
+        UNIQUE INDEX `uq_qqsa_question_id` (`question_id`),
+        CONSTRAINT `fk_qqsa_question_id` FOREIGN KEY (`question_id`) REFERENCES `quiez_questions` (`question_id`) ON UPDATE CASCADE ON DELETE CASCADE
+    ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+
 -- =============================================================================
 -- END OF SCRIPT
 -- =============================================================================
