@@ -31,7 +31,8 @@ $routeFiles = [
     'LearningMaterials/learningMaterialRoutes.php',
     'Attendance/manualAttendanceRoutes.php',
     'Quiez/quizQuestionRoutes.php',
-    'Quiez/trainingQuizRoutes.php',    
+    'Quiez/trainingQuizRoutes.php',
+    'System/OrganizationRoutes.php',    
     
 ];
 

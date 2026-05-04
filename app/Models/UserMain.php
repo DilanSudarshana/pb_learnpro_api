@@ -228,26 +228,46 @@ class UserMain extends Model
      */
     public function toggleStatus(int $id): int
     {
-        // Toggle directly in DB
-        $stmt = $this->db->prepare("
-        UPDATE user_mains 
-        SET is_active = 1 - is_active 
-        WHERE user_id = :id
-    ");
-        $stmt->execute(['id' => $id]);
+        try {
+            $this->db->beginTransaction();
 
-        // If no row affected → user not found
-        if ($stmt->rowCount() === 0) {
-            return -1;
+            // Toggle in user_details
+            $stmt1 = $this->db->prepare("
+            UPDATE user_details 
+            SET is_active = 1 - is_active 
+            WHERE user_id = :id
+        ");
+            $stmt1->execute(['id' => $id]);
+
+            // Toggle in user_mains
+            $stmt2 = $this->db->prepare("
+            UPDATE user_mains 
+            SET is_active = 1 - is_active 
+            WHERE user_id = :id
+        ");
+            $stmt2->execute(['id' => $id]);
+
+            // If no rows affected in BOTH → user not found
+            if ($stmt1->rowCount() === 0 && $stmt2->rowCount() === 0) {
+                $this->db->rollBack();
+                return -1;
+            }
+
+            // Get updated status (single source of truth)
+            $stmt = $this->db->prepare("
+            SELECT is_active FROM user_mains WHERE user_id = :id
+        ");
+            $stmt->execute(['id' => $id]);
+
+            $status = (int)$stmt->fetchColumn();
+
+            $this->db->commit();
+
+            return $status;
+        } catch (\Throwable $e) {
+            $this->db->rollBack();
+            throw $e;
         }
-
-        // Get updated status
-        $stmt = $this->db->prepare("
-        SELECT is_active FROM user_mains WHERE user_id = :id
-    ");
-        $stmt->execute(['id' => $id]);
-
-        return (int)$stmt->fetchColumn();
     }
 
     /**
