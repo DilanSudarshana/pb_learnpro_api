@@ -32,12 +32,15 @@ class AuthMiddleware
 
         try {
             $decoded = JwtHelper::verifyToken($token);
+
             // Store decoded user in a global so controllers can access it
             $_REQUEST['auth_user'] = $decoded;
+
             $next();
         } catch (\RuntimeException $e) {
             http_response_code(403);
-            echo json_encode(['message' => 'Invalid or expired token: ' . $e->getMessage()]);
+            echo json_encode(['message' => 'Invalid or expired token']);
+            return;
         }
     }
 }

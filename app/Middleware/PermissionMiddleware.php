@@ -56,8 +56,7 @@ class PermissionMiddleware
         if (!$hasPermission) {
             http_response_code(403);
             echo json_encode([
-                'message'    => 'Access denied. Permission not granted.',
-                'required'   => $this->requiredPermission,
+                'message' => 'Access denied. Permission not granted.',
             ]);
             return;
         }
