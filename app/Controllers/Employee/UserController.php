@@ -89,7 +89,6 @@ class UserController extends Controller
             return;
         }
 
-        // Make sure the user actually exists and isn't deleted.
         $existing = $this->userMain->getUserById($id);
 
         if (!$existing) {
@@ -110,19 +109,22 @@ class UserController extends Controller
             return;
         }
 
-        // user_mains fields 
+        // user_mains fields
         $mainAllowed = ['service_number', 'role_id', 'is_active'];
         $mainData    = array_intersect_key($body, array_flip($mainAllowed));
 
-        // user_details fields 
+        // user_details fields (exclude main-only + sensitive fields)
         $detailDenied = array_merge($mainAllowed, ['user_id', 'password', 'email']);
         $detailData   = array_diff_key($body, array_flip($detailDenied));
 
+        // Sync is_active to user_details as well if it was provided
+        if (array_key_exists('is_active', $body)) {
+            $detailData['is_active'] = $body['is_active'];
+        }
+
         $mainUpdated   = false;
         $detailUpdated = false;
-        $errors        = [];
 
-        // OPTIONAL: transaction (recommended)
         $this->db->beginTransaction();
 
         try {
@@ -156,7 +158,6 @@ class UserController extends Controller
             return;
         }
 
-        // Return updated user
         $updated = $this->userMain->getUserById($id);
         unset($updated['password']);
 
