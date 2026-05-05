@@ -288,8 +288,8 @@ class UserController extends Controller
             return;
         }
 
-        // ── Required fields ──────────────────────────────────────────────
-        $required = ['email', 'password', 'service_number', 'role_id', 'first_name', 'last_name'];
+        // Required fields
+        $required = ['email', 'service_number', 'role_id', 'first_name', 'last_name'];
         foreach ($required as $field) {
             if (empty($body[$field])) {
                 http_response_code(422);
@@ -298,14 +298,14 @@ class UserController extends Controller
             }
         }
 
-        // ── Duplicate email check ────────────────────────────────────────
+        // Duplicate email check
         if ($this->userMain->findByEmail($body['email'])) {
             http_response_code(409);
             echo json_encode(['success' => false, 'message' => 'Email already in use']);
             return;
         }
 
-        // ── Duplicate service number check ───────────────────────────────
+        // Duplicate service number check
         if ($this->userMain->findByServiceNumber($body['service_number'])) {
             http_response_code(409);
             echo json_encode([
@@ -315,9 +315,17 @@ class UserController extends Controller
             return;
         }
 
-        // ── Split payload ────────────────────────────────────────────────
+        // Always use default password: 123
+        $body['password'] = password_hash('123', PASSWORD_BCRYPT, ['cost' => 12]);
+
+        // Set default values
+        $body['is_active'] = $body['is_active'] ?? 1;
+        $body['is_delete'] = $body['is_delete'] ?? 0;
+        $body['is_online'] = $body['is_online'] ?? 0;
+
+        // Split payload
         $mainFields = ['email', 'password', 'service_number', 'role_id'];
-        $mainData   = array_intersect_key($body, array_flip($mainFields));
+        $mainData = array_intersect_key($body, array_flip($mainFields));
 
         $detailFields = [
             'first_name',
@@ -335,9 +343,9 @@ class UserController extends Controller
             'created_at',
             'updated_at',
         ];
+
         $detailData = array_intersect_key($body, array_flip($detailFields));
 
-        // ── Create ───────────────────────────────────────────────────────
         try {
             $userId = $this->userMain->createFullUser($mainData, $detailData);
         } catch (\Throwable $e) {
@@ -345,7 +353,7 @@ class UserController extends Controller
             echo json_encode([
                 'success' => false,
                 'message' => 'User creation failed',
-                'error'   => $e->getMessage(),
+                'error' => $e->getMessage(),
             ]);
             return;
         }

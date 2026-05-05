@@ -83,14 +83,15 @@ class UserMain extends Model
             um.role_id,
             um.password,
 
+            ur.role_name,
+            ur.level,
+
             ud.user_id AS detail_user_id,
-            ud.user_id,
             ud.first_name,
             ud.last_name,
             ud.phone_no,
             ud.profile_picture,
             ud.bio,
-            ud.role_id,
             ud.department_id,
             ud.branch_id,
             ud.date_joined,
@@ -101,8 +102,13 @@ class UserMain extends Model
             ud.updated_at
 
         FROM user_mains um
+
         INNER JOIN user_details ud 
             ON ud.user_id = um.user_id
+
+        LEFT JOIN user_roles ur
+            ON um.role_id = ur.role_id
+
         WHERE ud.is_delete = 0"
         );
 
