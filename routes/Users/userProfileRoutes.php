@@ -35,7 +35,7 @@ $router->get('/api/profile', [UserProfileController::class, 'show'], [
  *         emergency_contact_phone?, additional_details? }
  * Requires: PROFILE_EDIT
  */
-$router->put('/api/profile', [UserProfileController::class, 'update'], [
+$router->post('/api/profile', [UserProfileController::class, 'update'], [
     AuthMiddleware::class,
     permissionMiddleware('PROFILE_EDIT'),
 ]);

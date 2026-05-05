@@ -61,74 +61,88 @@ class UserProfileController extends Controller
         }
 
         $userId = (int) $authUser['user_id'];
-        $body   = $this->getBody();
 
-        // Fields belonging to user_mains
-        $mainFields = [
-            'email',
-            'password',
-            'service_number',
-            'role_id',
-            'is_active',
-        ];
-
-        // Fields belonging to user_details
-        $detailFields = [
+        $allowedDetailFields = [
             'first_name',
             'last_name',
             'phone_no',
-            'profile_picture',
             'bio',
-            'role_id',
-            'department_id',
-            'branch_id',
-            'date_joined',
-            'is_active',
-            'is_delete',
-            'is_online',
-            'created_at',
-            'updated_at'
         ];
 
-        // Separate incoming body fields into their respective table buckets
-        $mainData   = [];
         $detailData = [];
+        $contentType = $_SERVER['CONTENT_TYPE'] ?? '';
 
-        foreach ($body as $key => $value) {
-            if (in_array($key, $mainFields, true)) {
-                $mainData[$key] = $value;
-            } elseif (in_array($key, $detailFields, true)) {
-                $detailData[$key] = $value;
+        if (str_contains($contentType, 'application/json')) {
+            // ✅ JSON body (no file upload)
+            $body = json_decode(file_get_contents('php://input'), true) ?? [];
+            foreach ($allowedDetailFields as $field) {
+                if (isset($body[$field]) && trim((string)$body[$field]) !== '') {
+                    $detailData[$field] = trim((string)$body[$field]);
+                }
+            }
+        } else {
+            // ✅ multipart/form-data (with or without file)
+            foreach ($allowedDetailFields as $field) {
+                if (isset($_POST[$field]) && trim($_POST[$field]) !== '') {
+                    $detailData[$field] = trim($_POST[$field]);
+                }
             }
         }
 
-        if (empty($mainData) && empty($detailData)) {
+        // ✅ Handle profile picture upload from $_FILES
+        if (isset($_FILES['profile_picture']) && $_FILES['profile_picture']['error'] === UPLOAD_ERR_OK) {
+            $file    = $_FILES['profile_picture'];
+            $ext     = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+            $allowed = ['jpg', 'jpeg', 'png', 'gif'];
+
+            if (!in_array($ext, $allowed)) {
+                $this->json(['message' => 'Invalid image type. JPG, PNG, GIF allowed.'], 400);
+                return;
+            }
+
+            if ($file['size'] > 2 * 1024 * 1024) {
+                $this->json(['message' => 'Image size exceeds 2MB limit.'], 400);
+                return;
+            }
+
+            $uploadDir  = __DIR__ . '/../../public/uploads/profiles/';
+            $fileName   = uniqid('profile_', true) . '.' . $ext;
+            $uploadPath = $uploadDir . $fileName;
+
+            if (!is_dir($uploadDir)) {
+                mkdir($uploadDir, 0755, true);
+            }
+
+            if (!move_uploaded_file($file['tmp_name'], $uploadPath)) {
+                $this->json(['message' => 'Failed to upload profile picture.'], 500);
+                return;
+            }
+
+            $detailData['profile_picture'] = $fileName;
+        }
+
+        if (empty($detailData)) {
             $this->json(['message' => 'No updatable fields provided'], 400);
             return;
         }
 
         $now = date('Y-m-d H:i:s');
+        $detailData['updatedAt'] = $now;
 
-        // Inject timestamps
-        if (!empty($mainData)) {
-            $mainData['updated_at'] = $now;          // user_mains uses snake_case
-        }
-        if (!empty($detailData)) {
-            $detailData['updatedAt'] = $now;          // user_details uses camelCase
-        }
+        $detailUpdated = $this->model->updateUserDetails($userId, $detailData);
 
-        // Run both updates
-        $mainUpdated   = !empty($mainData)   ? $this->model->updateUserMain($userId, $mainData)     : true;
-        $detailUpdated = !empty($detailData) ? $this->model->updateUserDetails($userId, $detailData) : true;
-
-        if (!$mainUpdated || !$detailUpdated) {
+        if (!$detailUpdated) {
             $this->json(['message' => 'Failed to update profile'], 500);
             return;
         }
 
         $profile = $this->model->getProfile($userId);
 
-        $this->json(['message' => 'Profile updated successfully', 'data' => $profile]);
+        $this->json([
+            'status'  => 'success',
+            'message' => 'Profile updated successfully',
+            'data'    => $profile
+        ]);
     }
 
     public function changePassword(): void
