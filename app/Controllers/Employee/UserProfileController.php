@@ -69,70 +69,128 @@ class UserProfileController extends Controller
             'bio',
         ];
 
-        $detailData = [];
+        $detailData  = [];
         $contentType = $_SERVER['CONTENT_TYPE'] ?? '';
 
+        // ============================================================
+        // BRANCH 1: application/json — base64 image from frontend
+        // ============================================================
         if (str_contains($contentType, 'application/json')) {
-            // ✅ JSON body (no file upload)
+
             $body = json_decode(file_get_contents('php://input'), true) ?? [];
+
+            // Collect allowed text fields
             foreach ($allowedDetailFields as $field) {
                 if (isset($body[$field]) && trim((string)$body[$field]) !== '') {
                     $detailData[$field] = trim((string)$body[$field]);
                 }
             }
+
+            // ✅ Handle base64 profile picture
+            if (!empty($body['profile_picture'])) {
+                $base64Image = $body['profile_picture'];
+
+                // Validate format: data:image/xxx;base64,...
+                if (!preg_match('/^data:image\/(jpeg|jpg|png|gif);base64,/', $base64Image)) {
+                    $this->json(['message' => 'Invalid image format. Please provide a valid base64 image (JPG, PNG, GIF).'], 400);
+                    return;
+                }
+
+                // Strip prefix and decode with strict mode
+                $base64Data = preg_replace('/^data:image\/(jpeg|jpg|png|gif);base64,/', '', $base64Image);
+                $imageData  = base64_decode($base64Data, true);
+
+                if ($imageData === false) {
+                    $this->json(['message' => 'Invalid base64 image data. Decoding failed.'], 400);
+                    return;
+                }
+
+                // ✅ Validate actual image bytes (prevent spoofed base64)
+                $imageInfo = @getimagesizefromstring($imageData);
+                if ($imageInfo === false) {
+                    $this->json(['message' => 'Uploaded file is not a valid image.'], 400);
+                    return;
+                }
+
+                // ✅ Whitelist MIME types
+                $allowedMimeTypes = ['image/jpeg', 'image/png', 'image/gif'];
+                if (!in_array($imageInfo['mime'], $allowedMimeTypes)) {
+                    $this->json(['message' => 'Invalid image type. Only JPG, PNG, GIF are allowed.'], 400);
+                    return;
+                }
+
+                // ✅ Check decoded byte size (2MB limit)
+                if (strlen($imageData) > 2 * 1024 * 1024) {
+                    $this->json(['message' => 'Image size exceeds 2MB limit.'], 400);
+                    return;
+                }
+
+                // ✅ Store full base64 string directly in DB
+                $detailData['profile_picture'] = $base64Image;
+            }
+
+            // ============================================================
+            // BRANCH 2: multipart/form-data — legacy file upload fallback
+            // ============================================================
         } else {
-            // ✅ multipart/form-data (with or without file)
+
             foreach ($allowedDetailFields as $field) {
                 if (isset($_POST[$field]) && trim($_POST[$field]) !== '') {
                     $detailData[$field] = trim($_POST[$field]);
                 }
             }
+
+            // ✅ Convert uploaded file to base64 for consistent DB storage
+            if (isset($_FILES['profile_picture']) && $_FILES['profile_picture']['error'] === UPLOAD_ERR_OK) {
+                $file = $_FILES['profile_picture'];
+                $ext  = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+
+                if (!in_array($ext, ['jpg', 'jpeg', 'png', 'gif'])) {
+                    $this->json(['message' => 'Invalid image type. JPG, PNG, GIF allowed.'], 400);
+                    return;
+                }
+
+                if ($file['size'] > 2 * 1024 * 1024) {
+                    $this->json(['message' => 'Image size exceeds 2MB limit.'], 400);
+                    return;
+                }
+
+                // ✅ Validate actual image content
+                $imageInfo = @getimagesize($file['tmp_name']);
+                if ($imageInfo === false) {
+                    $this->json(['message' => 'Uploaded file is not a valid image.'], 400);
+                    return;
+                }
+
+                $allowedMimeTypes = ['image/jpeg', 'image/png', 'image/gif'];
+                if (!in_array($imageInfo['mime'], $allowedMimeTypes)) {
+                    $this->json(['message' => 'Invalid image type. Only JPG, PNG, GIF are allowed.'], 400);
+                    return;
+                }
+
+                // ✅ Read and convert to base64 — same format as JSON branch
+                $imageData   = file_get_contents($file['tmp_name']);
+                $mimeType    = $imageInfo['mime'];
+                $base64Image = 'data:' . $mimeType . ';base64,' . base64_encode($imageData);
+
+                $detailData['profile_picture'] = $base64Image;
+            }
         }
 
-        // ✅ Handle profile picture upload from $_FILES
-        if (isset($_FILES['profile_picture']) && $_FILES['profile_picture']['error'] === UPLOAD_ERR_OK) {
-            $file    = $_FILES['profile_picture'];
-            $ext     = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
-            $allowed = ['jpg', 'jpeg', 'png', 'gif'];
-
-            if (!in_array($ext, $allowed)) {
-                $this->json(['message' => 'Invalid image type. JPG, PNG, GIF allowed.'], 400);
-                return;
-            }
-
-            if ($file['size'] > 2 * 1024 * 1024) {
-                $this->json(['message' => 'Image size exceeds 2MB limit.'], 400);
-                return;
-            }
-
-            $uploadDir  = __DIR__ . '/../../public/uploads/profiles/';
-            $fileName   = uniqid('profile_', true) . '.' . $ext;
-            $uploadPath = $uploadDir . $fileName;
-
-            if (!is_dir($uploadDir)) {
-                mkdir($uploadDir, 0755, true);
-            }
-
-            if (!move_uploaded_file($file['tmp_name'], $uploadPath)) {
-                $this->json(['message' => 'Failed to upload profile picture.'], 500);
-                return;
-            }
-
-            $detailData['profile_picture'] = $fileName;
-        }
-
+        // ============================================================
+        // GUARD: nothing to update
+        // ============================================================
         if (empty($detailData)) {
-            $this->json(['message' => 'No updatable fields provided'], 400);
+            $this->json(['message' => 'No updatable fields provided.'], 400);
             return;
         }
 
-        $now = date('Y-m-d H:i:s');
-        $detailData['updatedAt'] = $now;
+        $detailData['updatedAt'] = date('Y-m-d H:i:s');
 
         $detailUpdated = $this->model->updateUserDetails($userId, $detailData);
 
         if (!$detailUpdated) {
-            $this->json(['message' => 'Failed to update profile'], 500);
+            $this->json(['message' => 'Failed to update profile.'], 500);
             return;
         }
 

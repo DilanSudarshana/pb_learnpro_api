@@ -326,4 +326,32 @@ class UserMain extends Model
             throw $e;
         }
     }
+
+    public function findUserDetailsByUserId(int $userId): ?array
+    {
+        $stmt = $this->db->prepare(
+            "SELECT 
+            first_name,
+            user_id,
+            last_name,
+            phone_no,
+            profile_picture,
+            bio,
+            role_id,
+            department_id,
+            branch_id,
+            date_joined,
+            is_active,
+            is_delete,
+            is_online
+        FROM user_details
+        WHERE user_id = :user_id
+        LIMIT 1"
+        );
+
+        $stmt->execute([':user_id' => $userId]);
+        $result = $stmt->fetch(\PDO::FETCH_ASSOC);
+
+        return $result ?: null;
+    }
 }

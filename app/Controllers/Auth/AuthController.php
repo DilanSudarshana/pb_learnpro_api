@@ -57,21 +57,35 @@ class AuthController extends Controller
             return;
         }
 
-        // ── Step 3: Load role permissions ────────────────────────────────
-        $roleId      = (int) ($user['role_id'] ?? 1);
+        // ── Step 3: Load user details from user_details table ────────────
+        $userDetails = $this->userModel->findUserDetailsByUserId($user['user_id']);
+
+        // ── Step 4: Load role permissions ────────────────────────────────
+        $roleId      = (int) ($userDetails['role_id'] ?? $user['role_id'] ?? 1);
         $permissions = $this->roleModel->getPermissionNames($roleId);
 
-        // ── Step 4: Generate JWT ─────────────────────────────────────────
+        // ── Step 5: Generate JWT ─────────────────────────────────────────
         $token = JwtHelper::generateToken($user, $permissions);
 
         $this->json([
             'message' => 'Login successful',
             'token'   => $token,
             'user'    => [
-                'user_id'        => $user['user_id'],
-                'email'          => $user['email'],
-                'service_number' => $user['service_number'] ?? null,
-                'role_id'        => $user['role_id'] ?? null,
+                'user_id'         => $user['user_id'],
+                'email'           => $user['email'],
+                'service_number'  => $user['service_number'] ?? null,
+                'role_id'         => $userDetails['role_id']        ?? $user['role_id'] ?? null,
+                'first_name'      => $userDetails['first_name']      ?? null,
+                'last_name'       => $userDetails['last_name']       ?? null,
+                'phone_no'        => $userDetails['phone_no']        ?? null,
+                'profile_picture' => $userDetails['profile_picture'] ?? null,
+                'bio'             => $userDetails['bio']             ?? null,
+                'department_id'   => $userDetails['department_id']   ?? null,
+                'branch_id'       => $userDetails['branch_id']       ?? null,
+                'date_joined'     => $userDetails['date_joined']     ?? null,
+                'is_active'       => $userDetails['is_active']       ?? null,
+                'is_delete'       => $userDetails['is_delete']       ?? null,
+                'is_online'       => $userDetails['is_online']       ?? null,
             ],
         ]);
     }
