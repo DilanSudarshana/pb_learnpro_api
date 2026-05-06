@@ -184,33 +184,39 @@ class UserController extends Controller
             return;
         }
 
-        // Soft-delete user_mains row.
-        $mainDeleted = $this->userMain->updateUserMain($id, [
+        // Prepare soft delete payload
+        $softDeleteData = [
             'is_delete' => 1,
             'is_active' => 0,
-        ]);
+            'updatedAt' => date('Y-m-d H:i:s')
+        ];
 
-        // Soft-delete user_details row via the FK (user_main_id = $id).
-        $detailDeleted = $this->userDetails->softDelete($id);
-
-        // softDelete() targets user_details.user_id; if that PK differs from
-        // user_main_id, use updateByUserMainId instead:
-        // $detailDeleted = $this->userDetails->updateByUserMainId($id, [
-        //     'is_delete' => 1,
-        //     'is_active' => 0,
-        // ]);
+        // Soft delete user_mains
+        $mainDeleted = $this->userMain->updateUserMain($id, $softDeleteData);
 
         if (!$mainDeleted) {
             $this->jsonResponse([
                 'status'  => 'error',
-                'message' => 'Failed to delete user.',
+                'message' => 'Failed to delete user (main).',
+            ], 500);
+            return;
+        }
+
+        // Soft delete user_details (based on FK)
+        $detailDeleted = $this->userDetails->updateByUserMainId($id, $softDeleteData);
+
+        // Optional: you can ignore detail failure OR enforce it
+        if (!$detailDeleted) {
+            $this->jsonResponse([
+                'status'  => 'error',
+                'message' => 'User main deleted, but failed to delete user details.',
             ], 500);
             return;
         }
 
         $this->jsonResponse([
             'status'  => 'success',
-            'message' => 'User deleted successfully.',
+            'message' => 'User soft deleted successfully.',
         ], 200);
     }
 

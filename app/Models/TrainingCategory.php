@@ -28,7 +28,7 @@ class TrainingCategory extends Model
                     CONCAT(ud.first_name, ' ', ud.last_name) AS created_by_name
                 FROM {$this->table} tc
                 LEFT JOIN user_details ud ON ud.user_id = tc.created_by
-                WHERE tc.is_active = 1
+                WHERE tc.is_delete = 0
                 ORDER BY tc.category_name ASC
             ";
 
