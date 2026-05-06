@@ -32,7 +32,7 @@ $router->get('/api/role-permissions', [RolePermissionController::class, 'index']
  * Toggles the active status of a role-permission record (1 ↔ 0).
  * Requires: ROLE_PERMISSION_EDIT
  */
-$router->put('/api/role-permissions-toggle/{id}', [RolePermissionController::class, 'toggleStatus'], [
+$router->put('/api/role-permissions-toggle/{role_id}/{permission_id}', [RolePermissionController::class, 'toggleStatus'], [
     AuthMiddleware::class,
     permissionMiddleware('ROLE_PERMISSION_EDIT'),
 ]);
