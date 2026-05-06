@@ -41,10 +41,10 @@ class UserPermission extends Model
     /**
      * Get all active permissions
      */
-    public function getAllActive(): array
+    public function getAll(): array
     {
         $stmt = $this->db->query(
-            "SELECT * FROM `{$this->table}` WHERE is_active = 1 ORDER BY display_name"
+            "SELECT * FROM `{$this->table}` ORDER BY permission_id ASC"
         );
         return $stmt->fetchAll();
     }

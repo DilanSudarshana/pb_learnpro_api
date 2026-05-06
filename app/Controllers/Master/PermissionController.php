@@ -24,7 +24,7 @@ class PermissionController extends Controller
      */
     public function index(): void
     {
-        $permissions = $this->model->getAllActive();
+        $permissions = $this->model->getAll();
         $this->json(['message' => 'Permissions retrieved', 'data' => $permissions]);
     }
 

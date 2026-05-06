@@ -216,24 +216,27 @@ class UserProfileController extends Controller
         $body   = $this->getBody();
 
         // Validate required fields
-        if (empty($body['current_password']) || empty($body['new_password']) || empty($body['confirm_password'])) {
-            $this->json(['message' => 'current_password, new_password and confirm_password are required'], 400);
+        if (
+            empty($body['current_password']) ||
+            empty($body['new_password']) ||
+            empty($body['confirm_password'])
+        ) {
+            $this->json(['message' => 'All password fields are required'], 400);
             return;
         }
 
-        // Check new password and confirm match
+        // Check match
         if ($body['new_password'] !== $body['confirm_password']) {
-            $this->json(['message' => 'new_password and confirm_password do not match'], 400);
+            $this->json(['message' => 'Passwords do not match'], 400);
             return;
         }
 
-        // Enforce minimum password strength
+        // Strength validation
         if (strlen($body['new_password']) < 8) {
-            $this->json(['message' => 'new_password must be at least 8 characters'], 400);
+            $this->json(['message' => 'Password must be at least 8 characters'], 400);
             return;
         }
 
-        // Fetch current hashed password from DB
         $user = $this->model->getUserById($userId);
 
         if (!$user) {
@@ -247,7 +250,12 @@ class UserProfileController extends Controller
             return;
         }
 
-        // Hash the new password
+        // Prevent same password reuse (optional but good practice)
+        if (password_verify($body['new_password'], $user['password'])) {
+            $this->json(['message' => 'New password cannot be same as current password'], 400);
+            return;
+        }
+
         $hashedPassword = password_hash($body['new_password'], PASSWORD_BCRYPT);
 
         $updated = $this->model->updatePassword($userId, $hashedPassword);
