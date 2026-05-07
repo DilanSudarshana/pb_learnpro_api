@@ -39,7 +39,6 @@ class TrainingSession extends Model
             LEFT JOIN training_category  tc ON tc.category_id = ts.category_id
             LEFT JOIN user_details       tr ON tr.user_id     = ts.trainer_id
             LEFT JOIN user_details       ud ON ud.user_id     = ts.created_by
-            WHERE ts.is_active = 1
               AND (ts.is_delete IS NULL OR ts.is_delete = 0)
             ORDER BY ts.session_date DESC, ts.session_time ASC
         ";
@@ -67,6 +66,7 @@ class TrainingSession extends Model
                 ts.is_active,
                 ts.created_at,
                 ts.updated_at,
+                ts.qr_code,
                 tc.category_id,
                 tc.category_name,
                 CONCAT(tr.first_name, ' ', tr.last_name) AS trainer_name,
@@ -144,5 +144,31 @@ class TrainingSession extends Model
 
         $stmt = $this->db->prepare($sql);
         return $stmt->execute($params);
+    }
+
+    public function getLastSession(): array|false
+    {
+        $stmt = $this->db->prepare(
+            "SELECT * FROM training_session
+         ORDER BY session_id DESC 
+         LIMIT 1"
+        );
+        $stmt->execute();
+        return $stmt->fetch(\PDO::FETCH_ASSOC);
+    }
+
+    public function updateQR(int $sessionId, string $qrCode): bool
+    {
+        $stmt = $this->db->prepare(
+            "UPDATE training_session
+         SET qr_code = :qr_code, updated_at = :updated_at 
+         WHERE session_id = :session_id"
+        );
+
+        return $stmt->execute([
+            'qr_code'    => $qrCode,
+            'updated_at' => date('Y-m-d H:i:s'),
+            'session_id' => $sessionId,
+        ]);
     }
 }

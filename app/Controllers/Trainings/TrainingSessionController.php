@@ -7,6 +7,10 @@ namespace App\Controllers\Trainings;
 use App\Core\Controller;
 use App\Models\TrainingSession;
 use App\Utils\JwtHelper;
+use Endroid\QrCode\QrCode;
+use Endroid\QrCode\Writer\PngWriter;
+use Endroid\QrCode\Encoding\Encoding;
+use Endroid\QrCode\ErrorCorrectionLevel;
 
 /**
  * TrainingSessionController — CRUD for training_session
@@ -76,51 +80,141 @@ class TrainingSessionController extends Controller
             $this->json(['message' => 'category_id is required'], 400);
             return;
         }
-
         if ($trainerId <= 0) {
             $this->json(['message' => 'trainer_id is required'], 400);
             return;
         }
-
         if (empty($location)) {
             $this->json(['message' => 'location is required'], 400);
             return;
         }
-
         if (empty($sessionDate)) {
             $this->json(['message' => 'session_date is required'], 400);
             return;
         }
-
         if (empty($sessionTime)) {
             $this->json(['message' => 'session_time is required'], 400);
             return;
         }
-
         if ($createdBy <= 0) {
             $this->json(['message' => 'created_by (user_id) is required'], 400);
             return;
         }
-        // ──────────────────────────────────────────────────────────────────────
+        // ─────────────────────────────────────────────────────────────────────
 
-        $id = $this->model->create([
-            'category_id'        => $categoryId,
-            'trainer_id'         => $trainerId,
-            'location'           => $location,
-            'session_date'       => $sessionDate,
-            'session_time'       => $sessionTime,
-            'check_in'           => $checkIn    ?: null,
-            'check_out'          => $checkOut   ?: null,
-            'total_hours'        => $totalHours,
-            'additional_details' => $additionalDetails,
-            'created_by'         => $createdBy,
-            'is_active'          => 1,
-            'is_delete'          => 0,
-            'created_at'         => date('Y-m-d H:i:s'),
-            'updated_at'         => date('Y-m-d H:i:s'),
-        ]);
+        // ── Step 1: Save session WITHOUT qr_code ─────────────────────────────
+        try {
+            $created = $this->model->create([
+                'category_id'        => $categoryId,
+                'trainer_id'         => $trainerId,
+                'location'           => $location,
+                'session_date'       => $sessionDate,
+                'session_time'       => $sessionTime,
+                'check_in'           => $checkIn    ?: null,
+                'check_out'          => $checkOut   ?: null,
+                'total_hours'        => $totalHours,
+                'additional_details' => $additionalDetails,
+                'created_by'         => $createdBy,
+                'qr_code'            => null,
+                'is_active'          => 1,
+                'is_delete'          => 0,
+                'created_at'         => date('Y-m-d H:i:s'),
+                'updated_at'         => date('Y-m-d H:i:s'),
+            ]);
+        } catch (\Throwable $e) {
+            $this->json([
+                'message' => 'Step 1 FAILED: create()',
+                'error'   => $e->getMessage(),
+            ], 500);
+            return;
+        }
 
-        $this->json(['message' => 'Training session created', 'session_id' => $id], 201);
+        if (!$created) {
+            $this->json(['message' => 'Step 1 FAILED: create() returned false'], 500);
+            return;
+        }
+
+        // ── Step 2: Get last inserted session by session_id ───────────────────
+        try {
+            $session = $this->model->getLastSession();
+        } catch (\Throwable $e) {
+            $this->json([
+                'message' => 'Step 2 FAILED: getLastSession()',
+                'error'   => $e->getMessage(),
+            ], 500);
+            return;
+        }
+
+        if (!$session) {
+            $this->json(['message' => 'Step 2 FAILED: getLastSession() returned empty'], 500);
+            return;
+        }
+
+        // ── Use correct PK column name: session_id ────────────────────────────
+        $sessionId = $session['session_id'];
+
+        // ── Step 3: Generate QR with session_id from DB ───────────────────────
+        try {
+            $qrContent = json_encode([
+                'session_id'         => $sessionId,
+                'category_id'        => $session['category_id'],
+                'trainer_id'         => $session['trainer_id'],
+                'location'           => $session['location'],
+                'session_date'       => $session['session_date'],
+                'session_time'       => $session['session_time'],
+                'check_in'           => $session['check_in'],
+                'check_out'          => $session['check_out'],
+                'total_hours'        => $session['total_hours'],
+                'additional_details' => $session['additional_details'],
+                'created_by'         => $session['created_by'],
+            ]);
+
+            $qrCode = new QrCode(
+                data: $qrContent,
+                encoding: new Encoding('UTF-8'),
+                errorCorrectionLevel: ErrorCorrectionLevel::High,
+                size: 300,
+                margin: 10,
+            );
+
+            $writer    = new PngWriter();
+            $result    = $writer->write($qrCode);
+            $qrBase64  = base64_encode($result->getString());
+            $qrDataUri = 'data:image/png;base64,' . $qrBase64;
+        } catch (\Throwable $e) {
+            $this->json([
+                'message'    => 'Step 3 FAILED: QR generation',
+                'error'      => $e->getMessage(),
+                'session_id' => $sessionId,
+            ], 500);
+            return;
+        }
+
+        // ── Step 4: Update qr_code on the saved session ───────────────────────
+        try {
+            $updated = $this->model->updateQR($sessionId, $qrDataUri);
+        } catch (\Throwable $e) {
+            $this->json([
+                'message'    => 'Step 4 FAILED: updateQR()',
+                'error'      => $e->getMessage(),
+                'session_id' => $sessionId,
+            ], 500);
+            return;
+        }
+
+        if (!$updated) {
+            $this->json([
+                'message'    => 'Step 4 FAILED: updateQR() returned false',
+                'session_id' => $sessionId,
+            ], 500);
+            return;
+        }
+
+        // ── Step 5: Return response ───────────────────────────────────────────
+        $this->json([
+            'status'     => 'success',
+            'message'    => 'Training session created',
+        ], 201);
     }
 
     /**
