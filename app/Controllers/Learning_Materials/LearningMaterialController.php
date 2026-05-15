@@ -65,7 +65,7 @@ class LearningMaterialController extends Controller
 
         // Get UPLOAD_BASE_PATH from .env and strip any trailing slash/backslash
         $this->uploadBasePath = rtrim(
-            $_ENV['UPLOAD_BASE_PATH'] ?? 'C:/xampp/htdocs/learnpro-api/public/uploads/learning_materials',
+            $_ENV['UPLOAD_BASE_PATH'],
             '/\\'
         );
     }
