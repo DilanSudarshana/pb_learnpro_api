@@ -76,30 +76,16 @@ class LearningMaterialController extends Controller
 
     /**
      * Convert the relative DB path to an absolute filesystem path.
-     *
-     * DB stores  :  {training_id}/{filename}  (e.g., "1/test.pdf")
-     * Returns    :  C:\...\learning_materials\{training_id}\{filename}
-     *
-     * Example:
-     *   Input:  "1/test.pdf"
-     *   Output: "C:\xampp\htdocs\learnpro-api\public\uploads\learning_materials\1\test.pdf"
      */
     private function absolutePath(string $relPath): string
     {
-        // Convert forward slashes to the OS-appropriate directory separator
-        // Remove any leading slashes from the relative path
         $normalizedPath = str_replace('/', DIRECTORY_SEPARATOR, ltrim($relPath, '/\\'));
-
         return $this->uploadBasePath . DIRECTORY_SEPARATOR . $normalizedPath;
     }
 
     /**
      * Build the relative path to persist in the DB.
-     *
-     * Always uses forward-slash regardless of OS:
-     *   {training_id}/{filename}
-     *
-     * Example: relativePath(1, "test.pdf") → "1/test.pdf"
+     * Always uses forward-slash: {training_id}/{filename}
      */
     private function relativePath(int $trainingId, string $fileName): string
     {
@@ -108,8 +94,6 @@ class LearningMaterialController extends Controller
 
     /**
      * Absolute path to the per-training upload directory.
-     *
-     * Example: C:\...\learning_materials\{training_id}
      */
     private function destDir(int $trainingId): string
     {
@@ -121,7 +105,7 @@ class LearningMaterialController extends Controller
      * file into $destDir.
      *
      * Returns the unique filename on success.
-     * Returns null and sends a JSON error response on failure — caller must return immediately.
+     * Returns null and sends a JSON error response on failure.
      */
     private function processUploadedFile(array $file, string $destDir): ?string
     {
@@ -233,8 +217,9 @@ class LearningMaterialController extends Controller
      * Expects multipart/form-data:
      *   - file               (required) binary
      *   - training_id        (required) target session ID
-     *   - uploaded_by        (required) user_id
      *   - additional_details (optional)
+     *
+     * uploaded_by is resolved automatically from the JWT token.
      *
      * File lands at:
      *   C:\...\learning_materials\{training_id}\{unique_filename}
@@ -244,16 +229,25 @@ class LearningMaterialController extends Controller
      */
     public function upload(): void
     {
-        // 1. File present and error-free?
+        // 1. Resolve authenticated user from JWT — uploaded_by auto-set
+        $authUser = JwtHelper::getAuthUserFromRequest();
+
+        if (!isset($authUser['user_id'])) {
+            $this->json(['message' => 'Unauthorized user'], 401);
+            return;
+        }
+
+        $uploadedBy = (int) $authUser['user_id'];
+
+        // 2. File present and error-free?
         if (empty($_FILES['file']) || $_FILES['file']['error'] !== UPLOAD_ERR_OK) {
             $code = $_FILES['file']['error'] ?? UPLOAD_ERR_NO_FILE;
             $this->json(['message' => $this->resolveUploadError($code)], 400);
             return;
         }
 
-        // 2. Required POST fields
+        // 3. Required POST fields
         $trainingId        = (int) ($_POST['training_id']      ?? 0);
-        $uploadedBy        = (int) ($_POST['uploaded_by']      ?? 0);
         $additionalDetails = trim($_POST['additional_details'] ?? '');
 
         if ($trainingId <= 0) {
@@ -261,12 +255,7 @@ class LearningMaterialController extends Controller
             return;
         }
 
-        if ($uploadedBy <= 0) {
-            $this->json(['message' => 'uploaded_by (user_id) is required'], 400);
-            return;
-        }
-
-        // 3. Validate + move file into {UPLOAD_BASE_PATH}\{training_id}\
+        // 4. Validate + move file into {UPLOAD_BASE_PATH}\{training_id}\
         $destDir    = $this->destDir($trainingId);
         $uniqueName = $this->processUploadedFile($_FILES['file'], $destDir);
 
@@ -274,12 +263,12 @@ class LearningMaterialController extends Controller
             return; // processUploadedFile already sent JSON error
         }
 
-        // 4. Resolve material_type from the saved file (more reliable than tmp)
+        // 5. Resolve material_type from the saved file (more reliable than tmp)
         $savedPath    = $destDir . DIRECTORY_SEPARATOR . $uniqueName;
         $mime         = mime_content_type($savedPath) ?: $_FILES['file']['type'];
         $materialType = $this->allowedMimeTypes[$mime] ?? 'file';
 
-        // 5. Persist to DB — store relative path with forward-slashes
+        // 6. Persist to DB — store relative path with forward-slashes
         $relPath = $this->relativePath($trainingId, $uniqueName);
 
         $id = $this->model->create([
@@ -310,9 +299,6 @@ class LearningMaterialController extends Controller
 
     /**
      * GET /api/learning-materials/{id}/download
-     *
-     * Resolves DB file_path → absolute path and streams the file as an
-     * attachment (forces browser download).
      */
     public function download(array $params): void
     {
@@ -324,8 +310,6 @@ class LearningMaterialController extends Controller
             return;
         }
 
-        // DB: "1/test.pdf"
-        // Abs: C:\...\learning_materials\1\test.pdf
         $absolutePath = $this->absolutePath($material['file_path']);
 
         if (!file_exists($absolutePath) || !is_readable($absolutePath)) {
@@ -360,8 +344,6 @@ class LearningMaterialController extends Controller
 
     /**
      * GET /api/learning-materials/{id}/preview
-     *
-     * Streams the file inline so the browser can render it (PDFs, images, etc.).
      */
     public function preview(array $params): void
     {
@@ -403,10 +385,6 @@ class LearningMaterialController extends Controller
 
     /**
      * PUT /api/learning-materials/{id}
-     *
-     * Body (JSON or multipart): { additional_details?, is_active? }
-     * Optionally include a new `file` field (multipart) to replace the file.
-     * When a new file is provided the old physical file is deleted from disk.
      */
     public function update(array $params): void
     {
@@ -449,7 +427,7 @@ class LearningMaterialController extends Controller
             $uniqueName = $this->processUploadedFile($_FILES['file'], $destDir);
 
             if ($uniqueName === null) {
-                return; // processUploadedFile already sent JSON error
+                return;
             }
 
             // Remove the old physical file
